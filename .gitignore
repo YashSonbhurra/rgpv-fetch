@@ -1,0 +1,5 @@
+.*
+!.gitignore
+RGPV_*
+eng.traineddata
+node_modules/

@@ -1,0 +1,86 @@
+{
+  "1": {
+    "name": "B.E",
+    "url": "/Result/BErslt.aspx"
+  },
+  "24": {
+    "name": "B.Tech.",
+    "url": "/Result/BErslt.aspx"
+  },
+  "5": {
+    "name": "M.C.A.",
+    "url": "/Result/MCArslt.aspx"
+  },
+  "2": {
+    "name": "B.Pharmacy",
+    "url": "/Result/BPHYrslt.aspx"
+  },
+  "43": {
+    "name": "B.Pharmacy(PCI)",
+    "url": "/Result/BPHYrslt.aspx"
+  },
+  "11": {
+    "name": "B.Arch.",
+    "url": "/Result/BARCHrslt.aspx"
+  },
+  "7": {
+    "name": "M.Pharmacy",
+    "url": "/Result/MPHARrslt.aspx"
+  },
+  "6": {
+    "name": "M.E.",
+    "url": "/Result/MTechrslt.aspx"
+  },
+  "8": {
+    "name": "M.Tech.",
+    "url": "/Result/MTechrslt.aspx"
+  },
+  "10": {
+    "name": "B.E.(PTDC)",
+    "url": "/Result/BErslt.aspx"
+  },
+  "20": {
+    "name": "M.Tech. (PT)",
+    "url": "/Result/MTechrslt.aspx"
+  },
+  "21": {
+    "name": "MAM",
+    "url": "/Result/MAMrslt.aspx"
+  },
+  "23": {
+    "name": "MCA (DD)",
+    "url": "/Result/McaDDrslt.aspx"
+  },
+  "3": {
+    "name": "Diploma",
+    "url": "/Result/Diplomarslt.aspx"
+  },
+  "44": {
+    "name": "Ph.D.",
+    "url": "/result/PHDArslt.aspx"
+  },
+  "51": {
+    "name": "Pharm D.",
+    "url": "/result/PHAR_Drslt.aspx"
+  },
+  "22": {
+    "name": "M.Arch.",
+    "url": "/result/MArchRslt.aspx"
+  },
+  "53": {
+    "name": "M.C.A.(2Year)",
+    "url": "/Result/MCArslt.aspx"
+  },
+  "4": {
+    "name": "M.B.A.",
+    "url": "/Result/MBArslt.aspx"
+  },
+  "42": {
+    "name": "B.Tech.(PTDC)",
+    "url": "/Result/BErslt.aspx"
+  },
+  "71": {
+    "name": "M.Pharm-PCI",
+    "url": "/Result/MPHARrslt.aspx"
+  }
+}
