@@ -6,11 +6,12 @@
   <title>RGPV Fetch</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&family=Orbitron:wght@400;500;600;700;800;900&family=Share+Tech+Mono&family=Slackey&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="glow-bg"></div>
+  <canvas id="particleCanvas" class="particle-canvas"></canvas>
   
   <header>
     <div class="container">
@@ -31,13 +32,140 @@
           <p>Results Extraction & Analytics Engine</p>
         </div>
       </div>
-      <div style="display: flex; align-items: center; gap: 0.5rem;">
-        <button id="clearCacheBtn" class="theme-toggle-btn" title="Clear Local Scraped Cache">
-          <span style="font-size: 0.95rem; line-height: 1;">🗑️</span>
+      <div style="display: flex; align-items: center; gap: 0.75rem; position: relative;">
+        <a href="https://github.com/YashSonbhurra/rgpv-fetch" target="_blank" class="github-header-badge" title="View Source on GitHub">
+          <svg class="github-icon" viewBox="0 0 16 16" width="14" height="14" fill="currentColor" style="margin-right: 0.35rem;">
+            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
+          </svg>
+          <span>GitHub Source</span>
+        </a>
+        
+        <button id="settingsToggleBtn" class="theme-toggle-btn" title="Console Style Customizer (⚙️)">
+          <span style="font-size: 0.95rem; line-height: 1;">⚙️</span>
         </button>
-        <button id="themeToggle" class="theme-toggle-btn" title="Toggle Dark/Light Mode">
-          <span class="theme-icon">🌙</span>
-        </button>
+        
+        <!-- Floating Settings Drawer Context Menu -->
+        <div id="settingsDrawer" class="settings-drawer glass hidden">
+          <h3 style="font-size: 0.8rem; font-weight: 800; color: var(--accent-primary); margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px dashed var(--card-border); padding-bottom: 0.4rem;">
+            Dashboard Style Control
+          </h3>
+          
+          <div class="drawer-row">
+            <label style="font-size: 0.72rem; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 0.3rem;">Color Theme</label>
+            <button id="themeToggle" class="btn btn-secondary" style="padding: 0.35rem 0.8rem; font-size: 0.75rem; border-radius: 5px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.4rem; height: 32px;">
+              <span class="theme-icon">🌙</span> <span id="themeToggleLabel">Light Blueprint</span>
+            </button>
+          </div>
+
+          <div class="drawer-row" style="margin-top: 0.75rem;">
+            <label for="themeTransitionSelect" style="font-size: 0.72rem; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 0.3rem;">Theme Transition</label>
+            <div class="select-wrapper mini-select" style="width: 100%;">
+              <select id="themeTransitionSelect" style="width: 100%; height: 32px; font-size: 0.75rem;">
+                <option value="ripple">Radial Wave (Cyber-ripple)</option>
+                <option value="snap">Instant Snap</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="drawer-row" style="margin-top: 0.75rem;">
+            <label for="fontSelect" style="font-size: 0.72rem; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 0.3rem;">Console Font</label>
+            <div class="select-wrapper mini-select" style="width: 100%;">
+              <select id="fontSelect" style="width: 100%; height: 32px; font-size: 0.75rem;">
+                <option value="Outfit">Outfit (Sleek Modern)</option>
+                <option value="Orbitron">Orbitron (Sci-Fi Neon)</option>
+                <option value="Share Tech Mono">Share Tech Mono (Console)</option>
+                <option value="Fira Code">Fira Code (Developer)</option>
+                <option value="Inter">Inter (Classic Bold)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="drawer-row" style="margin-top: 0.75rem;">
+            <label for="fontSizeSlider" style="font-size: 0.72rem; font-weight: 700; color: var(--text-muted); display: flex; justify-content: space-between; margin-bottom: 0.3rem;">
+              <span>Text Scale</span>
+              <span id="fontSizeDisplay" style="color: var(--accent-secondary); font-weight: 800;">16px</span>
+            </label>
+            <input type="range" id="fontSizeSlider" min="13" max="19" value="16" style="width: 100%; cursor: pointer; accent-color: var(--accent-primary);">
+          </div>
+
+          <div class="drawer-row" style="margin-top: 0.75rem; display: flex; align-items: center; justify-content: space-between;">
+            <span style="font-size: 0.72rem; font-weight: 700; color: var(--text-muted);">Matrix Background</span>
+            <label class="switch-toggle" style="position: relative; display: inline-block; width: 40px; height: 20px;">
+              <input type="checkbox" id="matrixBgToggle" checked style="opacity: 0; width: 0; height: 0;">
+              <span class="slider-toggle-btn" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--card-border); transition: .3s; border-radius: 20px;"></span>
+            </label>
+          </div>
+
+          <!-- Thanos Snappable Matrix Settings Container -->
+          <div id="matrixSettingsContainer" style="display: flex; flex-direction: column; gap: 0.65rem; transition: all 0.5s ease;">
+            <div class="drawer-row">
+              <label for="animationSelect" style="font-size: 0.72rem; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 0.3rem;">Matrix Pattern</label>
+              <div class="select-wrapper mini-select" style="width: 100%;">
+                <select id="animationSelect" style="width: 100%; height: 32px; font-size: 0.75rem;">
+                  <option value="particles">Constellation Particles</option>
+                  <option value="rings">Energy Radar Rings</option>
+                  <option value="waves">Plasma Energy Waves</option>
+                  <option value="grid">Synthwave 3D Grid</option>
+                  <option value="random">Dynamic Cycle</option>
+                  <option value="none">Disabled</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="drawer-row">
+              <label for="matrixIdleSizeSlider" style="font-size: 0.72rem; font-weight: 700; color: var(--text-muted); display: flex; justify-content: space-between; margin-bottom: 0.3rem;">
+                <span>Matrix Idle Size</span>
+                <span id="matrixIdleSizeDisplay" style="color: var(--accent-secondary); font-weight: 800;">200%</span>
+              </label>
+              <input type="range" id="matrixIdleSizeSlider" min="20" max="800" value="200" style="width: 100%; cursor: pointer; accent-color: var(--accent-primary);">
+            </div>
+
+            <div class="drawer-row">
+              <label for="matrixActiveSizeSlider" style="font-size: 0.72rem; font-weight: 700; color: var(--text-muted); display: flex; justify-content: space-between; margin-bottom: 0.3rem;">
+                <span>Matrix Scraping Size</span>
+                <span id="matrixActiveSizeDisplay" style="color: var(--accent-secondary); font-weight: 800;">300%</span>
+              </label>
+              <input type="range" id="matrixActiveSizeSlider" min="20" max="800" value="300" style="width: 100%; cursor: pointer; accent-color: var(--accent-primary);">
+            </div>
+          </div>
+
+          <div class="drawer-row" style="margin-top: 0.75rem; display: flex; align-items: center; justify-content: space-between;">
+            <span style="font-size: 0.72rem; font-weight: 700; color: var(--text-muted);">Scanning HUD Overlay</span>
+            <label class="switch-toggle" style="position: relative; display: inline-block; width: 40px; height: 20px;">
+              <input type="checkbox" id="scannerUiToggle" checked style="opacity: 0; width: 0; height: 0;">
+              <span class="slider-toggle-btn" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--card-border); transition: .3s; border-radius: 20px;"></span>
+            </label>
+          </div>
+
+          <div class="drawer-row" style="margin-top: 0.75rem; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
+            <div style="display: flex; flex-direction: column;">
+              <span style="font-family: 'Slackey', cursive; font-size: 0.82rem; color: #d946ef; text-shadow: 0 0 8px rgba(217, 70, 239, 0.45); letter-spacing: 0.5px;">Fun Mode</span>
+              <span style="font-size: 0.62rem; color: var(--text-muted); font-weight: 500; margin-top: 0.15rem; line-height: 1.2;">if you are not lame try fun mode or are you lame?</span>
+            </div>
+            <label class="switch-toggle" style="position: relative; display: inline-block; width: 40px; height: 20px; flex-shrink: 0;">
+              <input type="checkbox" id="sfxToggle" style="opacity: 0; width: 0; height: 0;">
+              <span class="slider-toggle-btn" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--card-border); transition: .3s; border-radius: 20px;"></span>
+            </label>
+          </div>
+
+          <div class="drawer-row hidden" id="sfxVolumeContainer" style="margin-top: 0.75rem;">
+            <label for="sfxVolumeSlider" style="font-size: 0.72rem; font-weight: 700; color: var(--text-muted); display: flex; justify-content: space-between; margin-bottom: 0.3rem;">
+              <span>SFX Volume</span>
+              <span id="sfxVolumeDisplay" style="color: var(--accent-secondary); font-weight: 800;">70%</span>
+            </label>
+            <input type="range" id="sfxVolumeSlider" min="0" max="100" value="70" style="width: 100%; cursor: pointer; accent-color: var(--accent-primary);">
+          </div>
+
+          <div class="drawer-row" style="margin-top: 1rem; border-top: 1px dashed var(--card-border); padding-top: 0.8rem; display: flex; flex-direction: column; gap: 0.5rem;">
+            <button id="clearCacheBtn" class="btn btn-danger" style="width: 100%; padding: 0.45rem; font-size: 0.75rem; border-radius: 5px; display: flex; align-items: center; justify-content: center; gap: 0.4rem; height: 32px; position: relative;">
+              <span>🗑️</span> <span>Clear Scraped Cache</span>
+            </button>
+            <button id="fullResetBtn" class="btn btn-secondary" style="width: 100%; padding: 0.45rem; font-size: 0.75rem; border-radius: 5px; display: flex; align-items: center; justify-content: center; gap: 0.4rem; height: 32px;">
+              <span>🔄</span> <span>Full System Reset</span>
+            </button>
+          </div>
+        </div>
+
         <div class="system-status">
           <span class="status-indicator" id="statusIndicator"></span>
           <span id="statusLabel">Idle</span>
@@ -70,7 +198,10 @@
               <input type="number" id="semesterInput" min="1" max="8" required placeholder="e.g. 3" maxlength="1">
             </div>
             <div class="form-group" style="flex: 1.5; align-items: flex-start;">
-              <label style="margin-bottom: 0.4rem; font-size: 0.82rem; font-weight: 600;">Selection Mode</label>
+              <label style="margin-bottom: 0.4rem; font-size: 0.82rem; font-weight: 600; display: flex; align-items: center;">
+                Selection Mode
+                <span class="info-tooltip-badge" data-tooltip="Helper mode auto-compiles RGPV ID codes based on college, branch and year. Manual mode lets you key in custom ranges or list formats.">?</span>
+              </label>
               <div class="toggle-group" id="inputModeToggle" style="padding: 0.2rem; gap: 0.2rem; height: 38px; width: fit-content;">
                 <button type="button" class="toggle-btn active" data-mode="visual" style="font-size: 0.72rem; padding: 0.2rem 0.5rem; border-radius: 4px; height: 100%;">Helper</button>
                 <button type="button" class="toggle-btn" data-mode="manual" style="font-size: 0.72rem; padding: 0.2rem 0.5rem; border-radius: 4px; height: 100%;">Manual</button>
@@ -80,7 +211,10 @@
 
           <div id="helperInputContainer" style="margin-top: 1rem;">
             <div class="form-group">
-              <label for="collegeSelect">College</label>
+              <label for="collegeSelect" style="display: flex; align-items: center;">
+                College
+                <span class="info-tooltip-badge" data-tooltip="Select RGPV affiliated college code (e.g. 0176 for LNCT Bhopal, 0103 for Oriental).">?</span>
+              </label>
               <div class="select-wrapper">
                 <select id="collegeSelect">
                   <option value="" disabled selected>Select College</option>
@@ -90,34 +224,57 @@
 
             <div class="form-row" style="margin-top: 1rem;">
               <div class="form-group" style="flex: 1;">
-                <label for="yearInput">Year of Admission</label>
+                <label for="yearInput" style="display: flex; align-items: center;">
+                  Year of Admission
+                  <span class="info-tooltip-badge" data-tooltip="Two-digit year code when the students registered (e.g., 23 for batch 2023).">?</span>
+                </label>
                 <input type="number" id="yearInput" min="10" max="99" placeholder="e.g. 23" maxlength="2">
               </div>
               <div class="form-group" style="flex: 1;">
-                <label for="branchInput">Branch Code</label>
-                <input type="text" id="branchInput" placeholder="e.g. CS, AL" style="text-transform: uppercase;">
+                <label for="branchInput" style="display: flex; align-items: center;">
+                  Branch Code
+                  <span class="info-tooltip-badge" data-tooltip="Select a department branch identifier (e.g. CS, AL, CY, DS, EC, IT).">?</span>
+                </label>
+                <div class="select-wrapper">
+                  <select id="branchInput">
+                    <option value="" disabled selected>Select Branch</option>
+                    <option value="CS">CS (Computer Science)</option>
+                    <option value="AL">AL (AI & Machine Learning)</option>
+                    <option value="CY">CY (Cyber Security)</option>
+                    <option value="DS">DS (Data Science)</option>
+                    <option value="EC">EC (Electronics & Comm.)</option>
+                    <option value="IT">IT (Information Tech.)</option>
+                    <option value="EE">EE (Electrical Eng.)</option>
+                    <option value="EX">EX (Electrical & Electronics)</option>
+                    <option value="ME">ME (Mechanical Eng.)</option>
+                    <option value="CE">CE (Civil Eng.)</option>
+                  </select>
+                </div>
               </div>
             </div>
 
             <div class="form-row" style="margin-top: 1rem;">
-              <div class="form-group" style="flex: 1;">
+              <div class="form-group" style="flex: 0.8;">
                 <label for="rangeStartInput">Start</label>
                 <input type="number" id="rangeStartInput" min="1" max="999" value="1" placeholder="e.g. 001" maxlength="3">
               </div>
-              <div class="form-group" style="flex: 1;">
-                <label for="rangeEndInput">End <span style="font-size: 0.72rem; font-weight: normal; color: var(--text-muted);">(leave empty to fetch all)</span></label>
+              <div class="form-group" style="flex: 0.8;">
+                <label for="rangeEndInput">End <span style="font-size: 0.72rem; font-weight: normal; color: var(--text-muted);">(leave empty)</span></label>
                 <input type="number" id="rangeEndInput" min="1" max="999" placeholder="e.g. 060" maxlength="3">
               </div>
-              <div class="form-group" style="flex: 1.5; align-items: flex-start; justify-content: flex-end;">
+              <div class="form-group" style="flex: 2.4; align-items: flex-start; justify-content: flex-end;">
                 <label style="margin-bottom: 0.4rem; font-size: 0.82rem; font-weight: 600;">Generated Pattern</label>
-                <div id="rangePreviewBadge" class="preview-badge" style="width: 100%;">????????????-???</div>
+                <div id="rangePreviewBadge" class="preview-badge" style="width: 100%;">____________-___</div>
               </div>
             </div>
           </div>
 
           <div id="manualInputContainer" class="hidden" style="margin-top: 1rem;">
             <div class="form-group">
-              <label for="rollInput">Enrollment range or list</label>
+              <label for="rollInput" style="display: flex; align-items: center;">
+                Enrollment range or list
+                <span class="info-tooltip-badge" data-tooltip="Custom enrollment string. Enter ranges using hyphens (e.g., 0176CS231001-080) or list multiple specific roll numbers separated by commas.">?</span>
+              </label>
               <input type="text" id="rollInput" placeholder="e.g. 0103AL241001-010" autocomplete="off">
               <span class="help-text">Supports shorthand range (001-010) or lists. Max 1000 range.</span>
             </div>
@@ -221,10 +378,16 @@
             <div class="tab-content active" id="tab-explorer">
               <div class="table-actions">
                 <span class="results-summary" id="resultsCount">0 student records found</span>
-                <div class="export-dropdown-container">
-                  <button class="btn btn-export" id="exportBtn" disabled>Export File ▼</button>
-                  <div class="dropdown-menu" id="exportDropdown">
-                  </div>
+                <div class="export-action-bar" id="exportActionBar">
+                  <button class="btn-export-quick xlsx" data-format="xlsx" disabled title="Export as Excel (.xlsx)">
+                    <span>📊 Excel</span>
+                  </button>
+                  <button class="btn-export-quick csv" data-format="csv" disabled title="Export as CSV (.csv)">
+                    <span>📄 CSV</span>
+                  </button>
+                  <button class="btn-export-quick json" data-format="json" disabled title="Export as JSON (.json)">
+                    <span>⚙️ JSON</span>
+                  </button>
                 </div>
               </div>
 
@@ -386,6 +549,16 @@
         
         <p><strong>Disclaimer of Liability:</strong> Under no circumstances shall the author, developers, or contributors of RGPV Fetch be held liable for any direct, indirect, incidental, or consequential damages, errors, discrepancies, or losses arising from the use of this software, server downtime, or reliance on the analytics presented herein.</p>
       </div>
+    </div>
+  </div>
+
+  <!-- Cyber-Scanner HUD Overlay -->
+  <div id="cyberScanner" class="cyber-scanner hidden">
+    <div class="scanner-line"></div>
+    <div class="scanner-hud">
+      <div class="hud-ring rotating-clockwise"></div>
+      <div class="hud-ring rotating-counter"></div>
+      <div class="hud-core">[ SYSTEM MINING ACTIVE: EXTRACTING RECORDS... ]</div>
     </div>
   </div>
 

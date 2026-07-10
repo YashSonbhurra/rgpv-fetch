@@ -46,8 +46,18 @@ document.addEventListener('DOMContentLoaded', () => {
   const tableHeadersRow = document.getElementById('tableHeadersRow');
   const resultsCount = document.getElementById('resultsCount');
 
-  const exportBtn = document.getElementById('exportBtn');
-  const exportDropdown = document.getElementById('exportDropdown');
+  const exportQuickBtns = document.querySelectorAll('.btn-export-quick');
+  const fontSelect = document.getElementById('fontSelect');
+  const fontSizeSlider = document.getElementById('fontSizeSlider');
+  const fontSizeDisplay = document.getElementById('fontSizeDisplay');
+  const animationSelect = document.getElementById('animationSelect');
+  const matrixBgToggle = document.getElementById('matrixBgToggle');
+  const matrixSettingsContainer = document.getElementById('matrixSettingsContainer');
+  const matrixIdleSizeSlider = document.getElementById('matrixIdleSizeSlider');
+  const matrixIdleSizeDisplay = document.getElementById('matrixIdleSizeDisplay');
+  const matrixActiveSizeSlider = document.getElementById('matrixActiveSizeSlider');
+  const matrixActiveSizeDisplay = document.getElementById('matrixActiveSizeDisplay');
+  const scannerUiToggle = document.getElementById('scannerUiToggle');
 
   const avgSgpaVal = document.getElementById('avgSgpaVal');
   const sgpaGaugeFill = document.getElementById('sgpaGaugeFill');
@@ -85,6 +95,50 @@ document.addEventListener('DOMContentLoaded', () => {
   const SETUP_STORAGE_KEY = 'rgpv_fetch_setup';
   let currentSortCol = 'enrollId';
   let currentSortDir = 'asc';
+  let previousJobStatus = 'idle';
+  let sfxPlayedForThisJob = false;
+
+  const sfxConfirm = new Audio('sfx/are you sure about that.wav');
+  const sfxSuccess = new Audio('sfx/hehe boi.wav');
+  const sfxCook = new Audio('sfx/Let him cook now.wav');
+  const sfxFahh = new Audio('sfx/FAHH.mp3');
+
+  // Global document interaction listener to unlock all Audio objects for autoplay
+  function unlockAudioContexts() {
+    const audios = [sfxConfirm, sfxSuccess, sfxCook, sfxFahh];
+    const unlock = () => {
+      audios.forEach(audio => {
+        audio.play()
+          .then(() => {
+            audio.pause();
+            audio.currentTime = 0;
+          })
+          .catch(() => {});
+      });
+      // Remove listeners once successfully unlocked
+      document.removeEventListener('click', unlock);
+      document.removeEventListener('keydown', unlock);
+      document.removeEventListener('touchstart', unlock);
+      console.log('[SFX] All audio contexts successfully unlocked by user interaction.');
+    };
+    document.addEventListener('click', unlock);
+    document.addEventListener('keydown', unlock);
+    document.addEventListener('touchstart', unlock);
+  }
+  unlockAudioContexts();
+
+  function playSFX(audio) {
+    const enabled = localStorage.getItem('rgpv_fetch_sfx_enabled') !== 'false';
+    const vol = parseFloat(localStorage.getItem('rgpv_fetch_sfx_volume') ?? '70') / 100;
+    console.log(`[SFX] playSFX called: src=${audio.src}, enabled=${enabled}, volume=${vol}`);
+    if (!enabled) return;
+    audio.volume = vol;
+    audio.currentTime = 0;
+    audio.play()
+      .then(() => console.log(`[SFX] Playback started successfully.`))
+      .catch((err) => console.error(`[SFX] Playback failed:`, err));
+  }
+  let particleNetwork = null;
 
   const gradePoints = {
     'A+': 10, 'A': 9, 'B+': 8, 'B': 7, 'C+': 6, 'C': 5, 'D': 4, 'F': 0, 'ABS': 0, 'W': 0
@@ -96,7 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
   async function initApp() {
     setupAccordion();
     setupTabs();
-    setupExportDropdown();
+    setupExportActions();
     setupSubjectSelect();
     setupInputModeToggle();
     setupRangePreview();
@@ -104,10 +158,13 @@ document.addEventListener('DOMContentLoaded', () => {
     setupThemeToggle();
     setupClearCache();
     setupModal();
+    setupCustomizer();
     loadSetupState();
     await loadCourses();
     await loadColleges();
     setupEventSource();
+    particleNetwork = new BackgroundMatrix('particleCanvas');
+    particleNetwork.start();
   }
 
   // Setup change event listener for subject select dropdown
@@ -294,22 +351,75 @@ document.addEventListener('DOMContentLoaded', () => {
   function setupThemeToggle() {
     const themeToggle = document.getElementById('themeToggle');
     const themeIcon = themeToggle.querySelector('.theme-icon');
+    const themeToggleLabel = document.getElementById('themeToggleLabel');
+
+    const updateLabel = (isDark) => {
+      if (themeToggleLabel) {
+        themeToggleLabel.textContent = isDark ? 'Deep Space Dark' : 'Light Blueprint';
+      }
+    };
 
     const savedTheme = localStorage.getItem('theme') || 'light';
     if (savedTheme === 'dark') {
       document.body.classList.add('dark-theme');
       themeIcon.textContent = '☀️';
+      updateLabel(true);
     } else {
       document.body.classList.remove('dark-theme');
       themeIcon.textContent = '🌙';
+      updateLabel(false);
     }
 
     themeToggle.addEventListener('click', () => {
-      document.body.classList.toggle('dark-theme');
-      const isDark = document.body.classList.contains('dark-theme');
-      themeIcon.textContent = isDark ? '☀️' : '🌙';
-      localStorage.setItem('theme', isDark ? 'dark' : 'light');
+      const isDark = !document.body.classList.contains('dark-theme');
+      const transitionType = document.getElementById('themeTransitionSelect')?.value || 'ripple';
+      
+      if (transitionType === 'ripple') {
+        triggerRadialThemeTransition(isDark);
+      } else {
+        triggerStaggerStagingTheme(isDark);
+      }
     });
+
+    // Helper for staggered circular/radial theme snap transition
+    function triggerStaggerStagingTheme(isDark) {
+      const centerLimitX = window.innerWidth / 2;
+      const centerLimitY = window.innerHeight / 2;
+      
+      // Select all major container components and elements
+      const elements = document.querySelectorAll('body, header, main, .card, .glass, button, input, select, th, td, h1, h2, h3, h4, p, span, label, .settings-drawer');
+      
+      elements.forEach(el => {
+        const rect = el.getBoundingClientRect();
+        const elX = rect.left + rect.width / 2;
+        const elY = rect.top + rect.height / 2;
+        const dx = elX - centerLimitX;
+        const dy = elY - centerLimitY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        
+        // Calculate delay proportional to distance from center (0.4ms per pixel)
+        const delay = Math.round(dist * 0.4); 
+        
+        el.style.transition = 'background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+        el.style.transitionDelay = `${delay}ms`;
+      });
+      
+      // Force layout calculation
+      document.body.offsetHeight;
+      
+      document.body.classList.toggle('dark-theme', isDark);
+      themeIcon.textContent = isDark ? '☀️' : '🌙';
+      updateLabel(isDark);
+      localStorage.setItem('theme', isDark ? 'dark' : 'light');
+      
+      // Clean up transitions after completion
+      setTimeout(() => {
+        elements.forEach(el => {
+          el.style.transition = '';
+          el.style.transitionDelay = '';
+        });
+      }, 1300);
+    }
   }
 
   // Setup click event handler for clear cache REST postback
@@ -317,7 +427,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const clearCacheBtn = document.getElementById('clearCacheBtn');
     if (!clearCacheBtn) return;
 
-    clearCacheBtn.addEventListener('click', async () => {
+    clearCacheBtn.addEventListener('click', async (e) => {
       const isScraping = statusLabel.textContent === 'Scraping';
       if (isScraping) {
         alert('Cannot clear cache while a scraping job is active.');
@@ -337,6 +447,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (res.ok) {
           alert(data.message);
+          // Trigger dustbin fountain animation after alert OK is clicked
+          spawnTrashFountain(clearCacheBtn);
         } else {
           alert('Error: ' + (data.error || 'Failed to clear cache'));
         }
@@ -373,25 +485,390 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Setup export format dropdown selector panel
-  function setupExportDropdown() {
-    exportBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      exportDropdown.classList.toggle('active');
-    });
-
-    document.addEventListener('click', () => {
-      exportDropdown.classList.remove('active');
-    });
-
-    exportDropdown.querySelectorAll('.dropdown-item').forEach(item => {
-      item.addEventListener('click', () => {
-        const format = item.getAttribute('data-format');
+  // Setup export format quick action buttons
+  function setupExportActions() {
+    exportQuickBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const format = btn.getAttribute('data-format');
         const courseId = courseSelect.value || '24';
         const semester = semesterInput.value || '3';
-        window.open(`/api/scrape/export?format=${format}&courseId=${courseId}&sem=${semester}`, '_blank');
+        const activeBranch = document.getElementById('branchFilter')?.value || 'ALL';
+        window.open(`/api/scrape/export?format=${format}&courseId=${courseId}&sem=${semester}&branch=${activeBranch}`, '_blank');
       });
     });
+  }
+
+  // Spawns a fountain of falling dustbin emojis from a click event source button
+  function spawnTrashFountain(button) {
+    if (!button) return;
+    const rect = button.getBoundingClientRect();
+    const count = 15;
+    
+    for (let i = 0; i < count; i++) {
+      const particle = document.createElement('div');
+      particle.className = 'trash-particle';
+      particle.textContent = '🗑️';
+      
+      const originX = rect.left + rect.width / 2;
+      const originY = rect.top + rect.height / 2;
+      
+      particle.style.left = `${originX}px`;
+      particle.style.top = `${originY}px`;
+      document.body.appendChild(particle);
+      
+      let x = originX;
+      let y = originY;
+      let vx = (Math.random() - 0.5) * 6; // Horizontal velocity
+      let vy = -Math.random() * 8 - 4;     // Upward initial velocity
+      const gravity = 0.4;                // Gravity
+      let angle = Math.random() * 360;
+      const spin = (Math.random() - 0.5) * 16;
+      let opacity = 1.0;
+      
+      const anim = () => {
+        vy += gravity;
+        x += vx;
+        y += vy;
+        angle += spin;
+        opacity -= 0.022;
+        
+        if (opacity <= 0) {
+          particle.remove();
+        } else {
+          particle.style.transform = `translate(${x - originX}px, ${y - originY}px) rotate(${angle}deg) scale(${opacity})`;
+          particle.style.opacity = opacity;
+          requestAnimationFrame(anim);
+        }
+      };
+      requestAnimationFrame(anim);
+    }
+  }
+
+  // Setup styling customizer event listeners
+  function setupCustomizer() {
+    const settingsToggleBtn = document.getElementById('settingsToggleBtn');
+    const settingsDrawer = document.getElementById('settingsDrawer');
+    const fullResetBtn = document.getElementById('fullResetBtn');
+    
+    if (settingsToggleBtn && settingsDrawer) {
+      settingsToggleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        settingsDrawer.classList.toggle('hidden');
+      });
+      
+      document.addEventListener('click', (e) => {
+        if (!settingsDrawer.contains(e.target) && e.target !== settingsToggleBtn) {
+          settingsDrawer.classList.add('hidden');
+        }
+      });
+    }
+
+    if (fontSelect) {
+      fontSelect.addEventListener('change', () => {
+        document.documentElement.style.setProperty('--font-main', `'${fontSelect.value}', sans-serif`);
+        localStorage.setItem('rgpv_fetch_custom_font', fontSelect.value);
+      });
+      const savedFont = localStorage.getItem('rgpv_fetch_custom_font');
+      if (savedFont) {
+        fontSelect.value = savedFont;
+        document.documentElement.style.setProperty('--font-main', `'${savedFont}', sans-serif`);
+      }
+    }
+
+    if (fontSizeSlider && fontSizeDisplay) {
+      const applySize = (size) => {
+        document.documentElement.style.fontSize = size + 'px';
+        fontSizeDisplay.textContent = size + 'px';
+        localStorage.setItem('rgpv_fetch_custom_font_size', size);
+      };
+      
+      fontSizeSlider.addEventListener('input', (e) => {
+        fontSizeDisplay.textContent = e.target.value + 'px';
+      });
+
+      fontSizeSlider.addEventListener('change', (e) => {
+        applySize(e.target.value);
+      });
+
+      const savedSize = localStorage.getItem('rgpv_fetch_custom_font_size');
+      if (savedSize) {
+        fontSizeSlider.value = savedSize;
+        applySize(savedSize);
+      }
+    }
+
+    if (animationSelect) {
+      animationSelect.addEventListener('change', () => {
+        if (particleNetwork && matrixBgToggle && matrixBgToggle.checked) {
+          particleNetwork.setMode(animationSelect.value);
+        }
+        localStorage.setItem('rgpv_fetch_custom_anim', animationSelect.value);
+      });
+      const savedAnim = localStorage.getItem('rgpv_fetch_custom_anim');
+      if (savedAnim) {
+        animationSelect.value = savedAnim;
+      }
+    }
+
+    if (fullResetBtn) {
+      fullResetBtn.addEventListener('click', async () => {
+        playSFX(sfxConfirm);
+
+        if (!confirm('A complete system wipe is requested. Are you sure you want to reset styles and miner states?')) {
+          sfxConfirm.pause();
+          return;
+        }
+        
+        if (!confirm('WARNING: This will permanently wipe your style dashboard settings and cache records. Are you absolutely sure?')) {
+          sfxConfirm.pause();
+          return;
+        }
+        
+        localStorage.removeItem('rgpv_fetch_custom_font');
+        localStorage.removeItem('rgpv_fetch_custom_font_size');
+        localStorage.removeItem('rgpv_fetch_custom_anim');
+        localStorage.removeItem('theme');
+        
+        if (fontSelect) {
+          fontSelect.value = 'Outfit';
+        }
+        document.documentElement.style.setProperty('--font-main', "'Outfit', sans-serif");
+        
+        if (fontSizeSlider) {
+          fontSizeSlider.value = '16';
+        }
+        if (fontSizeDisplay) {
+          fontSizeDisplay.textContent = '16px';
+        }
+        document.documentElement.style.fontSize = '';
+        
+        if (animationSelect) {
+          animationSelect.value = 'particles';
+        }
+        if (particleNetwork) {
+          particleNetwork.setMode('particles');
+          particleNetwork.startCalm();
+        }
+        
+        document.body.classList.remove('dark-theme');
+        const themeIcon = document.getElementById('themeToggle')?.querySelector('.theme-icon');
+        if (themeIcon) {
+          themeIcon.textContent = '🌙';
+        }
+        const themeToggleLabel = document.getElementById('themeToggleLabel');
+        if (themeToggleLabel) {
+          themeToggleLabel.textContent = 'Light Blueprint';
+        }
+
+        try {
+          const resetRes = await fetch('/api/scrape/reset', { method: 'POST' });
+          if (resetRes.ok) {
+            studentsResults = [];
+            activeBranchesList = [];
+            currentSortCol = 'enrollId';
+            currentSortDir = 'asc';
+            updateTableHeaders();
+            const branchFilter = document.getElementById('branchFilter');
+            if (branchFilter) {
+              branchFilter.value = 'ALL';
+            }
+            const branchWrapper = document.getElementById('branchFilterWrapper');
+            if (branchWrapper) {
+              branchWrapper.classList.add('hidden');
+            }
+            tableBody.innerHTML = `
+              <tr class="placeholder-row">
+                <td colspan="5" class="txt-muted text-center">Trigger a scraping job to populate data grid</td>
+              </tr>
+            `;
+            resultsCount.textContent = '0 student records found';
+            progressCard.classList.add('hidden');
+            exportQuickBtns.forEach(btn => btn.disabled = true);
+            
+            avgSgpaVal.textContent = '0.00';
+            sgpaGaugeFill.style.strokeDashoffset = '251.2';
+            avgCgpaVal.textContent = '0.00';
+            cgpaGaugeFill.style.strokeDashoffset = '251.2';
+            passRateVal.textContent = '0%';
+            passGaugeFill.style.strokeDashoffset = '251.2';
+            subjectsChartContainer.innerHTML = '<div class="txt-muted text-center py-4">No grading data parsed yet</div>';
+            tallyPassedCount.textContent = '0';
+            tallyGraceCount.textContent = '0';
+            tallyFailedCount.textContent = '0';
+            
+            alert('Dashboard styles, settings, and scraper states have been successfully reset.');
+          } else {
+            alert('Styles reset successfully, but server failed to reset scraping state.');
+          }
+        } catch (err) {
+          alert('Styles reset successfully, but error communicating with server reset: ' + err.message);
+        }
+      });
+    }
+
+    const sfxToggle = document.getElementById('sfxToggle');
+    const sfxVolumeSlider = document.getElementById('sfxVolumeSlider');
+    const sfxVolumeDisplay = document.getElementById('sfxVolumeDisplay');
+    const sfxVolumeContainer = document.getElementById('sfxVolumeContainer');
+    const themeTransitionSelect = document.getElementById('themeTransitionSelect');
+
+    if (sfxToggle && sfxVolumeSlider && sfxVolumeDisplay && sfxVolumeContainer) {
+      const updateVolumeText = (val) => {
+        sfxVolumeDisplay.textContent = val + '%';
+        const vol = parseFloat(val) / 100;
+        sfxConfirm.volume = vol;
+        sfxSuccess.volume = vol;
+        sfxCook.volume = vol;
+        sfxFahh.volume = vol;
+      };
+
+      const sfxEnabled = localStorage.getItem('rgpv_fetch_sfx_enabled') !== 'false';
+      sfxToggle.checked = sfxEnabled;
+      if (sfxEnabled) {
+        sfxVolumeContainer.classList.remove('hidden');
+      }
+
+      const sfxVolume = localStorage.getItem('rgpv_fetch_sfx_volume') || '70';
+      sfxVolumeSlider.value = sfxVolume;
+      updateVolumeText(sfxVolume);
+
+      sfxToggle.addEventListener('change', () => {
+        const enabled = sfxToggle.checked;
+        localStorage.setItem('rgpv_fetch_sfx_enabled', enabled);
+        if (enabled) {
+          sfxVolumeContainer.classList.remove('hidden', 'thanos-snap');
+          sfxVolumeContainer.classList.add('thanos-assemble');
+          setTimeout(() => {
+            if (sfxToggle.checked) {
+              sfxVolumeContainer.classList.remove('thanos-assemble');
+            }
+          }, 800);
+        } else {
+          sfxVolumeContainer.classList.remove('thanos-assemble');
+          sfxVolumeContainer.classList.add('thanos-snap');
+          setTimeout(() => {
+            if (!sfxToggle.checked) {
+              sfxVolumeContainer.classList.add('hidden');
+            }
+          }, 800);
+        }
+      });
+
+      sfxVolumeSlider.addEventListener('input', (e) => {
+        updateVolumeText(e.target.value);
+      });
+
+      sfxVolumeSlider.addEventListener('change', (e) => {
+        localStorage.setItem('rgpv_fetch_sfx_volume', e.target.value);
+      });
+    }
+
+    if (themeTransitionSelect) {
+      themeTransitionSelect.addEventListener('change', () => {
+        localStorage.setItem('rgpv_fetch_theme_transition', themeTransitionSelect.value);
+      });
+      const savedTransition = localStorage.getItem('rgpv_fetch_theme_transition');
+      if (savedTransition) {
+        themeTransitionSelect.value = savedTransition;
+      }
+    }
+
+    // Matrix Background Toggle & Custom Sizes
+    if (matrixBgToggle && matrixSettingsContainer && matrixIdleSizeSlider && matrixIdleSizeDisplay && matrixActiveSizeSlider && matrixActiveSizeDisplay && animationSelect) {
+      
+      const updateIdleSizeText = (val) => {
+        matrixIdleSizeDisplay.textContent = val + '%';
+        if (particleNetwork) {
+          particleNetwork.idleSize = parseFloat(val);
+        }
+      };
+
+      const updateActiveSizeText = (val) => {
+        matrixActiveSizeDisplay.textContent = val + '%';
+        if (particleNetwork) {
+          particleNetwork.activeSize = parseFloat(val);
+        }
+      };
+
+      // Load initial values
+      const matrixBgEnabled = localStorage.getItem('rgpv_matrix_bg_enabled') !== 'false';
+      matrixBgToggle.checked = matrixBgEnabled;
+      if (matrixBgEnabled) {
+        matrixSettingsContainer.classList.remove('hidden');
+      } else {
+        matrixSettingsContainer.classList.add('hidden');
+        if (particleNetwork) {
+          particleNetwork.setMode('none');
+        }
+      }
+
+      const savedIdleSize = localStorage.getItem('rgpv_matrix_idle_size') || '200';
+      matrixIdleSizeSlider.value = savedIdleSize;
+      updateIdleSizeText(savedIdleSize);
+
+      const savedActiveSize = localStorage.getItem('rgpv_matrix_active_size') || '300';
+      matrixActiveSizeSlider.value = savedActiveSize;
+      updateActiveSizeText(savedActiveSize);
+
+      // Listeners for toggle
+      matrixBgToggle.addEventListener('change', () => {
+        const enabled = matrixBgToggle.checked;
+        localStorage.setItem('rgpv_matrix_bg_enabled', enabled);
+        
+        if (enabled) {
+          matrixSettingsContainer.classList.remove('hidden', 'thanos-snap');
+          matrixSettingsContainer.classList.add('thanos-assemble');
+          
+          if (particleNetwork) {
+            particleNetwork.setMode(animationSelect.value);
+          }
+          
+          setTimeout(() => {
+            if (matrixBgToggle.checked) {
+              matrixSettingsContainer.classList.remove('thanos-assemble');
+            }
+          }, 800);
+        } else {
+          matrixSettingsContainer.classList.remove('thanos-assemble');
+          matrixSettingsContainer.classList.add('thanos-snap');
+          
+          if (particleNetwork) {
+            particleNetwork.setMode('none');
+          }
+          
+          setTimeout(() => {
+            if (!matrixBgToggle.checked) {
+              matrixSettingsContainer.classList.add('hidden');
+            }
+          }, 800);
+        }
+      });
+
+      // Listeners for sliders
+      matrixIdleSizeSlider.addEventListener('input', (e) => {
+        updateIdleSizeText(e.target.value);
+      });
+      matrixIdleSizeSlider.addEventListener('change', (e) => {
+        localStorage.setItem('rgpv_matrix_idle_size', e.target.value);
+      });
+
+      matrixActiveSizeSlider.addEventListener('input', (e) => {
+        updateActiveSizeText(e.target.value);
+      });
+      matrixActiveSizeSlider.addEventListener('change', (e) => {
+        localStorage.setItem('rgpv_matrix_active_size', e.target.value);
+      });
+    }
+
+    // Scanning HUD Overlay Toggle
+    if (scannerUiToggle) {
+      const scannerEnabled = localStorage.getItem('rgpv_scanner_ui_enabled') !== 'false';
+      scannerUiToggle.checked = scannerEnabled;
+      
+      scannerUiToggle.addEventListener('change', () => {
+        localStorage.setItem('rgpv_scanner_ui_enabled', scannerUiToggle.checked);
+      });
+    }
   }
 
   // Fetches available RGPV course categories from server
@@ -463,7 +940,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
     eventSource.addEventListener('state', (e) => {
       const data = JSON.parse(e.data);
-      updateStatusDisplay(data.status);
+      const currentStatus = data.status;
+      const resultsCount = data.resultsCount ?? (data.results ? data.results.length : 0);
+      
+      console.log(`[SSE State] currentStatus=${currentStatus}, previousJobStatus=${previousJobStatus}, resultsCount=${resultsCount}`);
+      
+      if (currentStatus === 'scraping') {
+        if (previousJobStatus !== 'scraping') {
+          playSFX(sfxCook);
+        }
+        sfxPlayedForThisJob = false;
+      }
+      
+      if (currentStatus === 'completed' && (resultsCount > 0 || studentsResults.length > 0) && !sfxPlayedForThisJob) {
+        console.log(`[SSE State] Job completed with results. Triggering success sequence...`);
+        sfxPlayedForThisJob = true;
+        playSFX(sfxSuccess);
+        
+        setTimeout(() => {
+          const tabsCard = document.querySelector('.tabs-card');
+          if (tabsCard) {
+            console.log(`[SSE State] Scrolling window down to results...`);
+            const offsetTop = tabsCard.getBoundingClientRect().top + window.scrollY;
+            window.scrollTo({ top: offsetTop - 20, behavior: 'smooth' });
+          }
+        }, 1400);
+      }
+      
+      previousJobStatus = currentStatus;
+      updateStatusDisplay(currentStatus);
       
       if (data.semester) activeJobSemester = String(data.semester);
       if (data.courseId) activeJobCourseId = String(data.courseId);
@@ -478,9 +983,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (progressBarText) progressBarText.textContent = '';
       } else if (data.status === 'completed' || data.status === 'aborted' || data.status === 'failed') {
         unlockUI();
-        if (data.resultsCount > 0) {
+        
+        // Pause and reset "Let him cook now" SFX on completion, abort, or error
+        sfxCook.pause();
+        sfxCook.currentTime = 0;
+        
+        if (resultsCount > 0) {
           progressCard.classList.remove('hidden');
-          exportBtn.disabled = false;
+          exportQuickBtns.forEach(btn => btn.disabled = false);
         }
 
         if (progressBarText) {
@@ -618,6 +1128,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Setup click handler to trigger scraping abort call
   stopBtn.addEventListener('click', async () => {
     try {
+      if (studentsResults.length === 0) {
+        playSFX(sfxFahh);
+      }
       const res = await fetch('/api/scrape/stop', { method: 'POST' });
       if (!res.ok) {
         throw new Error('Server error stopping scraper');
@@ -650,7 +1163,7 @@ document.addEventListener('DOMContentLoaded', () => {
       resultsCount.textContent = '0 student records found';
       
       progressCard.classList.add('hidden');
-      exportBtn.disabled = true;
+      exportQuickBtns.forEach(btn => btn.disabled = true);
       
       avgSgpaVal.textContent = '0.00';
       sgpaGaugeFill.style.strokeDashoffset = '251.2';
@@ -717,6 +1230,7 @@ document.addEventListener('DOMContentLoaded', () => {
     startBtn.disabled = true;
     stopBtn.disabled = false;
     resetBtn.disabled = true;
+    exportQuickBtns.forEach(btn => btn.disabled = true);
     courseSelect.disabled = true;
     semesterInput.disabled = true;
     concurrencyInput.disabled = true;
@@ -765,12 +1279,42 @@ document.addEventListener('DOMContentLoaded', () => {
     
     statusLabel.textContent = status.charAt(0).toUpperCase() + status.slice(1);
     
+    const container = document.querySelector('main.container');
+    const scanner = document.getElementById('cyberScanner');
+    
     if (status === 'scraping') {
       lockUI();
+      if (container) {
+        container.classList.add('mining-active');
+      }
+      const scannerEnabled = localStorage.getItem('rgpv_scanner_ui_enabled') !== 'false';
+      if (scanner && scannerEnabled) {
+        scanner.classList.remove('hidden');
+      }
+      if (particleNetwork) {
+        particleNetwork.startMining();
+      }
     } else {
       unlockUI();
+      if (container) {
+        container.classList.remove('mining-active');
+      }
+      if (scanner) {
+        scanner.classList.add('hidden');
+      }
+      
+      if (status === 'completed' || status === 'aborted') {
+        if (particleNetwork) {
+          particleNetwork.triggerBlast();
+        }
+      } else {
+        if (particleNetwork) {
+          particleNetwork.startCalm();
+        }
+      }
+      
       if (studentsResults.length > 0) {
-        exportBtn.disabled = false;
+        exportQuickBtns.forEach(btn => btn.disabled = false);
       }
     }
   }
@@ -806,6 +1350,23 @@ document.addEventListener('DOMContentLoaded', () => {
       progressPercent.textContent = `${pct}%`;
       progressBarFill.classList.remove('indeterminate');
       progressBarFill.style.width = `${pct}%`;
+      
+      console.log(`[Progress Update] pct=${pct}%, status=${progress.status}, sfxPlayedForThisJob=${sfxPlayedForThisJob}`);
+      
+      if (pct === 100 && progress.status === 'completed' && studentsResults.length > 0 && !sfxPlayedForThisJob) {
+        console.log(`[Progress Update] 100% reached with results. Triggering success sequence...`);
+        sfxPlayedForThisJob = true;
+        playSFX(sfxSuccess);
+        
+        setTimeout(() => {
+          const tabsCard = document.querySelector('.tabs-card');
+          if (tabsCard) {
+            console.log(`[Progress Update] Scrolling window down to results...`);
+            const offsetTop = tabsCard.getBoundingClientRect().top + window.scrollY;
+            window.scrollTo({ top: offsetTop - 20, behavior: 'smooth' });
+          }
+        }, 1400);
+      }
     }
   }
 
@@ -1078,19 +1639,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Synchronizes visual helper values to render the generated enrollment range preview
   function updateRangePreview() {
-    const clg = collegeSelect.value || '????';
-    const branchRaw = (branchInput.value || '??').trim();
-    const year = String(yearInput.value || '??').trim();
+    const clg = collegeSelect.value || '____';
+    const branchRaw = (branchInput.value || '__').trim();
+    const year = String(yearInput.value || '__').trim();
     const type = '1';
     const startNumRaw = String(rangeStartInput.value || '').trim();
     const endNumRaw = String(rangeEndInput.value || '').trim();
     
-    const startNum = startNumRaw ? startNumRaw.padStart(3, '0') : '???';
-    const endNum = endNumRaw ? endNumRaw.padStart(3, '0') : '???';
+    const startNum = startNumRaw ? startNumRaw.padStart(3, '0') : '___';
+    const endNum = endNumRaw ? endNumRaw.padStart(3, '0') : '___';
     
     const branches = branchRaw.split(',').map(b => b.trim().toUpperCase()).filter(Boolean);
     if (branches.length <= 1) {
-      const br = branches[0] || '??';
+      const br = branches[0] || '__';
       rangePreviewBadge.textContent = `${clg}${br}${year}${type}${startNum}-${endNum}`;
     } else {
       rangePreviewBadge.textContent = branches.map(br => `${clg}${br}${year}${type}${startNum}-${endNum}`).join(', ');
@@ -1365,6 +1926,381 @@ document.addEventListener('DOMContentLoaded', () => {
     const mins = Math.floor(totalSecs / 60);
     const secs = totalSecs % 60;
     return secs === 0 ? `${mins}m` : `${mins}m ${secs}s`;
+  }
+
+  // GPU-friendly, high-performance Canvas Background Matrix animation engine
+  class BackgroundMatrix {
+    constructor(canvasId) {
+      this.canvas = document.getElementById(canvasId);
+      if (!this.canvas) return;
+      this.ctx = this.canvas.getContext('2d');
+      this.animationFrameId = null;
+      this.active = false;
+      this.mode = 'particles';
+      this.speedMultiplier = 0.65;
+      this.isBlast = false;
+      
+      // Load custom background matrix sizes
+      this.idleSize = parseFloat(localStorage.getItem('rgpv_matrix_idle_size') || '200');
+      this.activeSize = parseFloat(localStorage.getItem('rgpv_matrix_active_size') || '300');
+      
+      this.cycleInterval = null;
+      this.modesList = ['particles', 'rings', 'waves', 'grid'];
+      this.currentCycleIndex = 0;
+      
+      this.particles = [];
+      this.maxParticles = 65;
+      
+      this.ringAngle = 0;
+      this.waveOffset = 0;
+      this.gridOffset = 0;
+      
+      window.addEventListener('resize', () => {
+        if (this.active) this.resizeCanvas();
+      });
+    }
+
+    resizeCanvas() {
+      if (this.canvas) {
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+      }
+    }
+
+    setMode(mode) {
+      const oldMode = this.mode;
+      this.mode = mode;
+      
+      if (mode !== 'random' && this.cycleInterval) {
+        clearInterval(this.cycleInterval);
+        this.cycleInterval = null;
+      }
+      
+      if (mode === 'random' && oldMode !== 'random') {
+        this.startCycleMode();
+      }
+
+      if (this.active) {
+        this.initModeState();
+      }
+    }
+
+    startCycleMode() {
+      if (this.cycleInterval) clearInterval(this.cycleInterval);
+      this.currentCycleIndex = 0;
+      this.cycleInterval = setInterval(() => {
+        if (!this.active) return;
+        this.currentCycleIndex = (this.currentCycleIndex + 1) % this.modesList.length;
+        this.initModeState();
+      }, 15000); // Cycles every 15s
+    }
+
+    initModeState() {
+      const activeMode = this.mode === 'random' ? this.modesList[this.currentCycleIndex] : this.mode;
+      
+      if (activeMode === 'particles') {
+        this.particles = [];
+        for (let i = 0; i < this.maxParticles; i++) {
+          this.particles.push(new Particle(this.canvas.width, this.canvas.height));
+        }
+      }
+    }
+
+    start() {
+      if (this.active) return;
+      this.active = true;
+      this.canvas.classList.add('active');
+      this.resizeCanvas();
+      
+      const matrixBgEnabled = localStorage.getItem('rgpv_matrix_bg_enabled') !== 'false';
+      const savedAnim = matrixBgEnabled ? (localStorage.getItem('rgpv_fetch_custom_anim') || 'particles') : 'none';
+      this.setMode(savedAnim);
+      
+      this.initModeState();
+      this.animate();
+    }
+
+    startCalm() {
+      this.speedMultiplier = 0.65;
+      this.isBlast = false;
+      this.isMining = false;
+      document.body.classList.remove('cyber-blast-active', 'cyber-drift-active');
+    }
+
+    startMining() {
+      this.speedMultiplier = 2.8;
+      this.isBlast = false;
+      this.isMining = true;
+      document.body.classList.remove('cyber-blast-active', 'cyber-drift-active');
+    }
+
+    triggerBlast(isAbort = false) {
+      this.isBlast = true;
+      this.isMining = false;
+      if (isAbort) {
+        this.speedMultiplier = 4.8;
+        document.body.classList.remove('cyber-drift-active');
+        document.body.classList.add('cyber-blast-active');
+        setTimeout(() => {
+          document.body.classList.remove('cyber-blast-active');
+          this.startCalm();
+        }, 2000); // Aggressive shake for aborted is 2s
+      } else {
+        this.speedMultiplier = 3.2;
+        document.body.classList.remove('cyber-blast-active');
+        document.body.classList.add('cyber-drift-active');
+        setTimeout(() => {
+          document.body.classList.remove('cyber-drift-active');
+          this.startCalm();
+        }, 1200); // Subtle drift for success is 1.2s
+      }
+    }
+
+    stop() {
+      // Runs continuously
+    }
+
+    animate() {
+      if (!this.active && !this.animationFrameId) return;
+      
+      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+      
+      const activeMode = this.mode === 'random' ? this.modesList[this.currentCycleIndex] : this.mode;
+      const isDark = document.body.classList.contains('dark-theme');
+      
+      // Apply shadow glow in dark mode for extra tech aesthetics!
+      if (isDark) {
+        this.ctx.shadowBlur = this.isBlast ? 12 : 6;
+        this.ctx.shadowColor = 'rgba(0, 240, 255, 0.65)';
+      } else {
+        this.ctx.shadowBlur = 0;
+        this.ctx.shadowColor = 'transparent';
+      }
+      
+      if (activeMode === 'none') {
+        // Render empty
+      } else if (activeMode === 'particles') {
+        this.drawParticles(isDark);
+      } else if (activeMode === 'rings') {
+        this.drawRings(isDark);
+      } else if (activeMode === 'waves') {
+        this.drawWaves(isDark);
+      } else if (activeMode === 'grid') {
+        this.drawGrid(isDark);
+      }
+      
+      if (this.active || this.animationFrameId) {
+        this.animationFrameId = requestAnimationFrame(() => this.animate());
+      }
+    }
+
+    drawParticles(isDark) {
+      const sizeFactor = (this.isMining ? this.activeSize : this.idleSize) / 100;
+      const particleColor = isDark ? 'rgba(0, 240, 255, 0.65)' : 'rgba(37, 99, 235, 0.4)';
+      const connectionDistance = (this.isBlast ? 180 : 115) * Math.sqrt(sizeFactor);
+      
+      for (let i = 0; i < this.particles.length; i++) {
+        const p = this.particles[i];
+        p.update(this.canvas.width, this.canvas.height, this.speedMultiplier);
+        p.draw(this.ctx, particleColor, this.isBlast, sizeFactor);
+      }
+      
+      this.ctx.lineWidth = (this.isBlast ? 2.5 : 1) * Math.sqrt(sizeFactor);
+      for (let i = 0; i < this.particles.length; i++) {
+        for (let j = i + 1; j < this.particles.length; j++) {
+          const p1 = this.particles[i];
+          const p2 = this.particles[j];
+          const dx = p1.x - p2.x;
+          const dy = p1.y - p2.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          
+          if (dist < connectionDistance) {
+            const alpha = (1 - dist / connectionDistance) * (isDark ? (this.isBlast ? 0.55 : 0.28) : (this.isBlast ? 0.38 : 0.18));
+            this.ctx.strokeStyle = isDark 
+              ? `rgba(0, 240, 255, ${alpha})`
+              : `rgba(37, 99, 235, ${alpha})`;
+            this.ctx.beginPath();
+            this.ctx.moveTo(p1.x, p1.y);
+            this.ctx.lineTo(p2.x, p2.y);
+            this.ctx.stroke();
+          }
+        }
+      }
+    }
+
+    drawRings(isDark) {
+      const sizeFactor = (this.isMining ? this.activeSize : this.idleSize) / 100;
+      const centerX = this.canvas.width / 2;
+      const centerY = this.canvas.height / 2;
+      const maxRadius = Math.max(this.canvas.width, this.canvas.height) * (this.isBlast ? 0.8 : 0.65);
+      
+      this.ringAngle += (this.isBlast ? 0.012 : 0.003) * this.speedMultiplier;
+      
+      this.ctx.lineWidth = (this.isBlast ? 3.0 : 1.5) * Math.sqrt(sizeFactor);
+      
+      const numRings = this.isBlast ? 7 : 5;
+      for (let i = 1; i <= numRings; i++) {
+        const r = (maxRadius / numRings) * i;
+        const alpha = (1 - (r / maxRadius)) * (isDark ? (this.isBlast ? 0.65 : 0.38) : (this.isBlast ? 0.45 : 0.22));
+        this.ctx.strokeStyle = isDark 
+          ? `rgba(0, 240, 255, ${alpha})`
+          : `rgba(37, 99, 235, ${alpha})`;
+        
+        const pulseRadius = r + Math.sin(this.ringAngle * 2 + i) * (this.isBlast ? 40 : 15);
+        
+        this.ctx.beginPath();
+        this.ctx.arc(centerX, centerY, pulseRadius, 0, Math.PI * 2);
+        this.ctx.stroke();
+        
+        this.ctx.save();
+        this.ctx.translate(centerX, centerY);
+        this.ctx.rotate(this.ringAngle * (i % 2 === 0 ? 1.5 : -1));
+        
+        this.ctx.fillStyle = isDark ? 'rgba(217, 70, 239, 0.68)' : 'rgba(14, 165, 233, 0.5)';
+        this.ctx.beginPath();
+        this.ctx.arc(pulseRadius, 0, (this.isBlast ? 8 : 4) * sizeFactor, 0, Math.PI * 2);
+        this.ctx.fill();
+        this.ctx.restore();
+      }
+    }
+
+    drawWaves(isDark) {
+      const sizeFactor = (this.isMining ? this.activeSize : this.idleSize) / 100;
+      this.waveOffset += (this.isBlast ? 0.05 : 0.015) * this.speedMultiplier;
+      const waveCount = this.isBlast ? 5 : 3;
+      
+      for (let w = 0; w < waveCount; w++) {
+        const alpha = (1 - w / waveCount) * (isDark ? (this.isBlast ? 0.55 : 0.28) : (this.isBlast ? 0.38 : 0.18));
+        this.ctx.strokeStyle = isDark 
+          ? `rgba(217, 70, 239, ${alpha})` 
+          : `rgba(14, 165, 233, ${alpha})`;
+        this.ctx.lineWidth = ((this.isBlast ? 3.5 : 1.8) - w * 0.4) * Math.sqrt(sizeFactor);
+        
+        this.ctx.beginPath();
+        const amplitude = ((this.isBlast ? 75 : 30) + w * 15) * sizeFactor;
+        const frequency = (0.0015 + w * 0.0005) / Math.sqrt(sizeFactor);
+        
+        for (let x = 0; x < this.canvas.width; x += 10) {
+          const y = (this.canvas.height * 0.5) + 
+                    Math.sin(x * frequency + this.waveOffset + w) * amplitude +
+                    Math.cos(x * 0.0008 - this.waveOffset * 0.5) * (amplitude * 0.5);
+          
+          if (x === 0) {
+            this.ctx.moveTo(x, y);
+          } else {
+            this.ctx.lineTo(x, y);
+          }
+        }
+        this.ctx.stroke();
+      }
+    }
+
+    drawGrid(isDark) {
+      const sizeFactor = (this.isMining ? this.activeSize : this.idleSize) / 100;
+      this.gridOffset += (this.isBlast ? 4.5 : 1.2) * this.speedMultiplier;
+      const cellWidth = 80 * sizeFactor;
+      const cellHeight = 80 * sizeFactor;
+      
+      this.ctx.lineWidth = (this.isBlast ? 2.5 : 1) * Math.sqrt(sizeFactor);
+      this.ctx.strokeStyle = isDark 
+        ? `rgba(0, 240, 255, ${this.isBlast ? 0.45 : 0.18})` 
+        : `rgba(37, 99, 235, ${this.isBlast ? 0.32 : 0.12})`;
+      
+      const horizon = this.canvas.height * (this.isBlast ? 0.3 : 0.45);
+      const linesCount = 20;
+      
+      for (let i = 0; i < linesCount; i++) {
+        const yRatio = i / linesCount;
+        const y = horizon + Math.pow(yRatio, 2.5) * (this.canvas.height - horizon) + (this.gridOffset % cellHeight) * yRatio;
+        if (y < horizon || y > this.canvas.height) continue;
+        
+        this.ctx.beginPath();
+        this.ctx.moveTo(0, y);
+        this.ctx.lineTo(this.canvas.width, y);
+        this.ctx.stroke();
+      }
+      
+      const cols = 26;
+      const centerX = this.canvas.width / 2;
+      for (let i = -cols/2; i <= cols/2; i++) {
+        const startX = centerX + i * cellWidth;
+        const endX = centerX + i * cellWidth * 4;
+        
+        this.ctx.beginPath();
+        this.ctx.moveTo(startX, horizon);
+        this.ctx.lineTo(endX, this.canvas.height);
+        this.ctx.stroke();
+      }
+    }
+  }
+
+  class Particle {
+    constructor(w, h) {
+      this.x = Math.random() * w;
+      this.y = Math.random() * h;
+      this.vx = (Math.random() - 0.5) * 1.6;
+      this.vy = (Math.random() - 0.5) * 1.6;
+      this.baseSize = Math.random() * 2.2 + 1.2;
+      this.size = this.baseSize;
+    }
+
+    update(w, h, speedMult = 1.0) {
+      this.x += this.vx * speedMult;
+      this.y += this.vy * speedMult;
+      
+      if (this.x < 0) this.x = w;
+      if (this.x > w) this.x = 0;
+      if (this.y < 0) this.y = h;
+      if (this.y > h) this.y = 0;
+    }
+
+    draw(ctx, color, isBlast = false, sizeFactor = 1.0) {
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      const currentSize = (isBlast ? this.baseSize * 2.6 : this.baseSize) * sizeFactor;
+      ctx.arc(this.x, this.y, currentSize, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // Handles radial wave theme transitions (Cyber-ripple)
+  function triggerRadialThemeTransition(isDark) {
+    const ripple = document.createElement('div');
+    ripple.className = 'theme-transition-ripple';
+    
+    // Set dynamic target background color matching light/dark base themes
+    ripple.style.setProperty('--target-bg', isDark ? '#050811' : '#e8eff7');
+    
+    document.body.appendChild(ripple);
+    
+    // Force reflow
+    ripple.offsetHeight;
+    
+    ripple.classList.add('active');
+    
+    setTimeout(() => {
+      document.body.classList.toggle('dark-theme', isDark);
+      const themeToggle = document.getElementById('themeToggle');
+      const themeIcon = themeToggle?.querySelector('.theme-icon');
+      if (themeIcon) {
+        themeIcon.textContent = isDark ? '☀️' : '🌙';
+      }
+      
+      const themeToggleLabel = document.getElementById('themeToggleLabel');
+      if (themeToggleLabel) {
+        themeToggleLabel.textContent = isDark ? 'Space Dark' : 'Light Blueprint';
+      }
+      
+      localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    }, 1300);
+    
+    setTimeout(() => {
+      ripple.classList.add('fade-out');
+    }, 1800);
+    
+    setTimeout(() => {
+      ripple.remove();
+    }, 2600);
   }
 
 });
