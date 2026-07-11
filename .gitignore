@@ -3,3 +3,9 @@
 RGPV_*
 eng.traineddata
 node_modules/
+
+# Ignore local source audio folder (static files are served under src/web/public/sfx/)
+/sfx/
+
+# Ignore local temporary test files
+test.json
