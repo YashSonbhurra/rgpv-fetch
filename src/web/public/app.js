@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const passGaugeFill = document.getElementById('passGaugeFill');
   const subjectsChartContainer = document.getElementById('subjectsChartContainer');
   const subjectSelect = document.getElementById('subjectSelect');
-  
+
   const tallyPassedCount = document.getElementById('tallyPassedCount');
   const tallyGraceCount = document.getElementById('tallyGraceCount');
   const tallyFailedCount = document.getElementById('tallyFailedCount');
@@ -75,7 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const reportCardModal = document.getElementById('reportCardModal');
   const closeModalBtn = document.getElementById('closeModalBtn');
   const modalReportContent = document.getElementById('modalReportContent');
-  
+
   const disclaimerModal = document.getElementById('disclaimerModal');
   const disclaimerLink = document.getElementById('disclaimerLink');
   const closeDisclaimerBtn = document.getElementById('closeDisclaimerBtn');
@@ -98,14 +98,15 @@ document.addEventListener('DOMContentLoaded', () => {
   let previousJobStatus = 'idle';
   let sfxPlayedForThisJob = false;
 
-  const sfxConfirm = new Audio('sfx/funmode_are_you_sure_abour_that.wav');
+  const sfxConfirm = new Audio('sfx/funmode_are_you_sure_about_that.wav');
   const sfxSuccess = new Audio('sfx/funmode_hehe_boi.wav');
   const sfxCook = new Audio('sfx/funmode_let_him_cook_now.wav');
   const sfxFahh = new Audio('sfx/funmode_fahh.mp3');
+  const sfxBye = new Audio('sfx/funmode_bye_have_a_great_time.mp3');
 
   // Global document interaction listener to unlock all Audio objects for autoplay
   function unlockAudioContexts() {
-    const audios = [sfxConfirm, sfxSuccess, sfxCook, sfxFahh];
+    const audios = [sfxConfirm, sfxSuccess, sfxCook, sfxFahh, sfxBye];
     const unlock = () => {
       audios.forEach(audio => {
         audio.play()
@@ -113,7 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
             audio.pause();
             audio.currentTime = 0;
           })
-          .catch(() => {});
+          .catch(() => { });
       });
       // Remove listeners once successfully unlocked
       document.removeEventListener('click', unlock);
@@ -205,7 +206,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Builds and opens the modal report card layout for a selected student record
   function openReportCardModal(student) {
     if (!student) return;
-    
+
     const clgCode = student.enrollId.substring(0, 4);
     let collegeName = 'N/A';
     if (globalCollegesData[clgCode]) {
@@ -218,14 +219,14 @@ document.addEventListener('DOMContentLoaded', () => {
         collegeName = `College [${clgCode}]`;
       }
     }
-    
+
     const courseId = student.courseId || activeJobCourseId || courseSelect.value || '24';
     const rawCourseName = coursesData[courseId]?.name || (courseSelect.options[courseSelect.selectedIndex]?.text || 'N/A');
     const courseName = rawCourseName.replace(/\s*\(\d+\)\s*/g, '');
     const branchCode = student.enrollId.substring(4, 6).toUpperCase();
-    
+
     const semester = student.semester || activeJobSemester || semesterInput.value || 'N/A';
-    
+
     let subjectsHtml = '';
     if (student.format === 'grading') {
       subjectsHtml = `
@@ -276,7 +277,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
       `;
     }
-    
+
     const statusText = (student.status || 'PASS').toUpperCase();
     let badgeClass = 'pass';
     if (statusText.includes('FAIL')) {
@@ -335,7 +336,7 @@ document.addEventListener('DOMContentLoaded', () => {
         inputModeBtns.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         activeInputMode = btn.getAttribute('data-mode');
-        
+
         if (activeInputMode === 'visual') {
           helperInputContainer.classList.remove('hidden');
           manualInputContainer.classList.add('hidden');
@@ -373,7 +374,7 @@ document.addEventListener('DOMContentLoaded', () => {
     themeToggle.addEventListener('click', () => {
       const isDark = !document.body.classList.contains('dark-theme');
       const transitionType = document.getElementById('themeTransitionSelect')?.value || 'ripple';
-      
+
       if (transitionType === 'ripple') {
         triggerRadialThemeTransition(isDark);
       } else {
@@ -385,10 +386,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function triggerStaggerStagingTheme(isDark) {
       const centerLimitX = window.innerWidth / 2;
       const centerLimitY = window.innerHeight / 2;
-      
+
       // Select all major container components and elements
       const elements = document.querySelectorAll('body, header, main, .card, .glass, button, input, select, th, td, h1, h2, h3, h4, p, span, label, .settings-drawer');
-      
+
       elements.forEach(el => {
         const rect = el.getBoundingClientRect();
         const elX = rect.left + rect.width / 2;
@@ -396,22 +397,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const dx = elX - centerLimitX;
         const dy = elY - centerLimitY;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        
+
         // Calculate delay proportional to distance from center (0.4ms per pixel)
-        const delay = Math.round(dist * 0.4); 
-        
+        const delay = Math.round(dist * 0.4);
+
         el.style.transition = 'background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
         el.style.transitionDelay = `${delay}ms`;
       });
-      
+
       // Force layout calculation
       document.body.offsetHeight;
-      
+
       document.body.classList.toggle('dark-theme', isDark);
       themeIcon.textContent = isDark ? '☀️' : '🌙';
       updateLabel(isDark);
       localStorage.setItem('theme', isDark ? 'dark' : 'light');
-      
+
       // Clean up transitions after completion
       setTimeout(() => {
         elements.forEach(el => {
@@ -474,10 +475,10 @@ document.addEventListener('DOMContentLoaded', () => {
     tabButtons.forEach(btn => {
       btn.addEventListener('click', () => {
         const tabId = btn.getAttribute('data-tab');
-        
+
         tabButtons.forEach(b => b.classList.remove('active'));
         tabContents.forEach(c => c.classList.remove('active'));
-        
+
         btn.classList.add('active');
         document.getElementById(`tab-${tabId}`).classList.add('active');
         currentActiveTab = tabId;
@@ -503,19 +504,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!button) return;
     const rect = button.getBoundingClientRect();
     const count = 15;
-    
+
     for (let i = 0; i < count; i++) {
       const particle = document.createElement('div');
       particle.className = 'trash-particle';
       particle.textContent = '🗑️';
-      
+
       const originX = rect.left + rect.width / 2;
       const originY = rect.top + rect.height / 2;
-      
+
       particle.style.left = `${originX}px`;
       particle.style.top = `${originY}px`;
       document.body.appendChild(particle);
-      
+
       let x = originX;
       let y = originY;
       let vx = (Math.random() - 0.5) * 6; // Horizontal velocity
@@ -524,14 +525,14 @@ document.addEventListener('DOMContentLoaded', () => {
       let angle = Math.random() * 360;
       const spin = (Math.random() - 0.5) * 16;
       let opacity = 1.0;
-      
+
       const anim = () => {
         vy += gravity;
         x += vx;
         y += vy;
         angle += spin;
         opacity -= 0.022;
-        
+
         if (opacity <= 0) {
           particle.remove();
         } else {
@@ -549,13 +550,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const settingsToggleBtn = document.getElementById('settingsToggleBtn');
     const settingsDrawer = document.getElementById('settingsDrawer');
     const fullResetBtn = document.getElementById('fullResetBtn');
-    
+
     if (settingsToggleBtn && settingsDrawer) {
       settingsToggleBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         settingsDrawer.classList.toggle('hidden');
       });
-      
+
       document.addEventListener('click', (e) => {
         if (!settingsDrawer.contains(e.target) && e.target !== settingsToggleBtn) {
           settingsDrawer.classList.add('hidden');
@@ -581,7 +582,7 @@ document.addEventListener('DOMContentLoaded', () => {
         fontSizeDisplay.textContent = size + 'px';
         localStorage.setItem('rgpv_fetch_custom_font_size', size);
       };
-      
+
       fontSizeSlider.addEventListener('input', (e) => {
         fontSizeDisplay.textContent = e.target.value + 'px';
       });
@@ -618,22 +619,22 @@ document.addEventListener('DOMContentLoaded', () => {
           sfxConfirm.pause();
           return;
         }
-        
+
         if (!confirm('WARNING: This will permanently wipe your style dashboard settings and cache records. Are you absolutely sure?')) {
           sfxConfirm.pause();
           return;
         }
-        
+
         localStorage.removeItem('rgpv_fetch_custom_font');
         localStorage.removeItem('rgpv_fetch_custom_font_size');
         localStorage.removeItem('rgpv_fetch_custom_anim');
         localStorage.removeItem('theme');
-        
+
         if (fontSelect) {
           fontSelect.value = 'Outfit';
         }
         document.documentElement.style.setProperty('--font-main', "'Outfit', sans-serif");
-        
+
         if (fontSizeSlider) {
           fontSizeSlider.value = '16';
         }
@@ -641,7 +642,7 @@ document.addEventListener('DOMContentLoaded', () => {
           fontSizeDisplay.textContent = '16px';
         }
         document.documentElement.style.fontSize = '';
-        
+
         if (animationSelect) {
           animationSelect.value = 'particles';
         }
@@ -649,7 +650,7 @@ document.addEventListener('DOMContentLoaded', () => {
           particleNetwork.setMode('particles');
           particleNetwork.startCalm();
         }
-        
+
         document.body.classList.remove('dark-theme');
         const themeIcon = document.getElementById('themeToggle')?.querySelector('.theme-icon');
         if (themeIcon) {
@@ -684,7 +685,7 @@ document.addEventListener('DOMContentLoaded', () => {
             resultsCount.textContent = '0 student records found';
             progressCard.classList.add('hidden');
             exportQuickBtns.forEach(btn => btn.disabled = true);
-            
+
             avgSgpaVal.textContent = '0.00';
             sgpaGaugeFill.style.strokeDashoffset = '251.2';
             avgCgpaVal.textContent = '0.00';
@@ -695,7 +696,7 @@ document.addEventListener('DOMContentLoaded', () => {
             tallyPassedCount.textContent = '0';
             tallyGraceCount.textContent = '0';
             tallyFailedCount.textContent = '0';
-            
+
             alert('Dashboard styles, settings, and scraper states have been successfully reset.');
           } else {
             alert('Styles reset successfully, but server failed to reset scraping state.');
@@ -720,6 +721,7 @@ document.addEventListener('DOMContentLoaded', () => {
         sfxSuccess.volume = vol;
         sfxCook.volume = vol;
         sfxFahh.volume = vol;
+        sfxBye.volume = vol;
       };
 
       const sfxEnabled = localStorage.getItem('rgpv_fetch_sfx_enabled') !== 'false';
@@ -734,8 +736,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
       sfxToggle.addEventListener('change', () => {
         const enabled = sfxToggle.checked;
-        localStorage.setItem('rgpv_fetch_sfx_enabled', enabled);
+        
         if (enabled) {
+          localStorage.setItem('rgpv_fetch_sfx_enabled', 'true');
+          playSFX(sfxSuccess);
+          
           sfxVolumeContainer.classList.remove('hidden', 'thanos-snap');
           sfxVolumeContainer.classList.add('thanos-assemble');
           setTimeout(() => {
@@ -744,6 +749,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
           }, 800);
         } else {
+          // Play the bye sound effect immediately before turning off the system state
+          const vol = parseFloat(localStorage.getItem('rgpv_fetch_sfx_volume') ?? '70') / 100;
+          sfxBye.volume = vol;
+          sfxBye.currentTime = 0;
+          sfxBye.play().catch(() => {});
+          
+          localStorage.setItem('rgpv_fetch_sfx_enabled', 'false');
+          
           sfxVolumeContainer.classList.remove('thanos-assemble');
           sfxVolumeContainer.classList.add('thanos-snap');
           setTimeout(() => {
@@ -775,7 +788,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Matrix Background Toggle & Custom Sizes
     if (matrixBgToggle && matrixSettingsContainer && matrixIdleSizeSlider && matrixIdleSizeDisplay && matrixActiveSizeSlider && matrixActiveSizeDisplay && animationSelect) {
-      
+
       const updateIdleSizeText = (val) => {
         matrixIdleSizeDisplay.textContent = val + '%';
         if (particleNetwork) {
@@ -814,15 +827,15 @@ document.addEventListener('DOMContentLoaded', () => {
       matrixBgToggle.addEventListener('change', () => {
         const enabled = matrixBgToggle.checked;
         localStorage.setItem('rgpv_matrix_bg_enabled', enabled);
-        
+
         if (enabled) {
           matrixSettingsContainer.classList.remove('hidden', 'thanos-snap');
           matrixSettingsContainer.classList.add('thanos-assemble');
-          
+
           if (particleNetwork) {
             particleNetwork.setMode(animationSelect.value);
           }
-          
+
           setTimeout(() => {
             if (matrixBgToggle.checked) {
               matrixSettingsContainer.classList.remove('thanos-assemble');
@@ -831,11 +844,11 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
           matrixSettingsContainer.classList.remove('thanos-assemble');
           matrixSettingsContainer.classList.add('thanos-snap');
-          
+
           if (particleNetwork) {
             particleNetwork.setMode('none');
           }
-          
+
           setTimeout(() => {
             if (!matrixBgToggle.checked) {
               matrixSettingsContainer.classList.add('hidden');
@@ -864,7 +877,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (scannerUiToggle) {
       const scannerEnabled = localStorage.getItem('rgpv_scanner_ui_enabled') !== 'false';
       scannerUiToggle.checked = scannerEnabled;
-      
+
       scannerUiToggle.addEventListener('change', () => {
         localStorage.setItem('rgpv_scanner_ui_enabled', scannerUiToggle.checked);
       });
@@ -876,7 +889,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const res = await fetch('/api/courses');
       coursesData = await res.json();
-      
+
       courseSelect.innerHTML = '';
       Object.entries(coursesData).forEach(([id, info]) => {
         const option = document.createElement('option');
@@ -900,17 +913,17 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const res = await fetch('/api/colleges');
       globalCollegesData = await res.json();
-      
+
       collegeSelect.innerHTML = '';
-      
+
       const defaultOpt = document.createElement('option');
       defaultOpt.value = '';
       defaultOpt.disabled = true;
       defaultOpt.textContent = 'Select College';
       collegeSelect.appendChild(defaultOpt);
-      
+
       const sortedColleges = Object.entries(globalCollegesData).sort((a, b) => a[0].localeCompare(b[0]));
-      
+
       sortedColleges.forEach(([code, c]) => {
         const option = document.createElement('option');
         option.value = code;
@@ -923,7 +936,7 @@ document.addEventListener('DOMContentLoaded', () => {
         collegeSelect.value = pendingSavedCollege;
         pendingSavedCollege = '';
       }
-      
+
       updateRangePreview();
     } catch (err) {
       console.error('Failed to load colleges:', err);
@@ -942,21 +955,21 @@ document.addEventListener('DOMContentLoaded', () => {
       const data = JSON.parse(e.data);
       const currentStatus = data.status;
       const resultsCount = data.resultsCount ?? (data.results ? data.results.length : 0);
-      
+
       console.log(`[SSE State] currentStatus=${currentStatus}, previousJobStatus=${previousJobStatus}, resultsCount=${resultsCount}`);
-      
+
       if (currentStatus === 'scraping') {
         if (previousJobStatus !== 'scraping') {
           playSFX(sfxCook);
         }
         sfxPlayedForThisJob = false;
       }
-      
+
       if (currentStatus === 'completed' && (resultsCount > 0 || studentsResults.length > 0) && !sfxPlayedForThisJob) {
         console.log(`[SSE State] Job completed with results. Triggering success sequence...`);
         sfxPlayedForThisJob = true;
         playSFX(sfxSuccess);
-        
+
         setTimeout(() => {
           const tabsCard = document.querySelector('.tabs-card');
           if (tabsCard) {
@@ -966,28 +979,28 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         }, 1400);
       }
-      
+
       previousJobStatus = currentStatus;
       updateStatusDisplay(currentStatus);
-      
+
       if (data.semester) activeJobSemester = String(data.semester);
       if (data.courseId) activeJobCourseId = String(data.courseId);
       if (data.progress) {
         if (data.progress.courseId) activeJobCourseId = String(data.progress.courseId);
         if (data.progress.semester) activeJobSemester = String(data.progress.semester);
       }
-      
+
       if (data.status === 'scraping') {
         lockUI();
         progressCard.classList.remove('hidden');
         if (progressBarText) progressBarText.textContent = '';
       } else if (data.status === 'completed' || data.status === 'aborted' || data.status === 'failed') {
         unlockUI();
-        
+
         // Pause and reset "Let him cook now" SFX on completion, abort, or error
         sfxCook.pause();
         sfxCook.currentTime = 0;
-        
+
         if (resultsCount > 0) {
           progressCard.classList.remove('hidden');
           exportQuickBtns.forEach(btn => btn.disabled = false);
@@ -1007,7 +1020,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         }
       }
-      
+
       if (data.results && data.results.length > 0) {
         studentsResults = data.results;
         updateBranchFilterDropdown();
@@ -1043,19 +1056,19 @@ document.addEventListener('DOMContentLoaded', () => {
     e.preventDefault();
 
     let finalRollInput = '';
-    
+
     if (activeInputMode === 'visual') {
       const clg = collegeSelect.value;
       const branchRaw = branchInput.value.trim();
       const year = String(yearInput.value).trim();
       const startNumRaw = String(rangeStartInput.value).trim();
       const endNumRaw = String(rangeEndInput.value).trim();
-      
+
       if (!clg || !branchRaw || !year || !startNumRaw) {
         alert('Please fill out all visual helper fields (College, Year, Branch, and Start).');
         return;
       }
-      
+
       const branches = branchRaw.split(',').map(b => b.trim().toUpperCase()).filter(Boolean);
       if (branches.length === 0) {
         alert('Please enter at least one branch code.');
@@ -1064,7 +1077,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const startNum = startNumRaw.padStart(3, '0');
       const endNum = endNumRaw ? endNumRaw.padStart(3, '0') : '';
-      
+
       const ranges = branches.map(branch => `${clg}${branch}${year}1${startNum}-${endNum}`);
       finalRollInput = ranges.join(', ');
     } else {
@@ -1117,7 +1130,7 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('branchFilterWrapper').classList.add('hidden');
       tableBody.innerHTML = '';
       resultsCount.textContent = '0 student records found';
-      
+
       progressCard.classList.remove('hidden');
       lockUI();
     } catch (err) {
@@ -1147,7 +1160,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!res.ok) {
         throw new Error('Server error resetting scraper state');
       }
-      
+
       studentsResults = [];
       activeBranchesList = [];
       currentSortCol = 'enrollId';
@@ -1161,10 +1174,10 @@ document.addEventListener('DOMContentLoaded', () => {
         </tr>
       `;
       resultsCount.textContent = '0 student records found';
-      
+
       progressCard.classList.add('hidden');
       exportQuickBtns.forEach(btn => btn.disabled = true);
-      
+
       avgSgpaVal.textContent = '0.00';
       sgpaGaugeFill.style.strokeDashoffset = '251.2';
       avgCgpaVal.textContent = '0.00';
@@ -1184,17 +1197,17 @@ document.addEventListener('DOMContentLoaded', () => {
   tableHeadersRow.addEventListener('click', (e) => {
     const th = e.target.closest('th');
     if (!th) return;
-    
+
     const col = th.getAttribute('data-sort');
     if (!col) return;
-    
+
     if (currentSortCol === col) {
       currentSortDir = currentSortDir === 'asc' ? 'desc' : 'asc';
     } else {
       currentSortCol = col;
       currentSortDir = (col === 'sgpa' || col === 'cgpa') ? 'desc' : 'asc';
     }
-    
+
     updateTableHeaders();
     rebuildTable();
   });
@@ -1276,12 +1289,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (status !== 'idle') {
       statusIndicator.classList.add(status);
     }
-    
+
     statusLabel.textContent = status.charAt(0).toUpperCase() + status.slice(1);
-    
+
     const container = document.querySelector('main.container');
     const scanner = document.getElementById('cyberScanner');
-    
+
     if (status === 'scraping') {
       lockUI();
       if (container) {
@@ -1302,7 +1315,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (scanner) {
         scanner.classList.add('hidden');
       }
-      
+
       if (status === 'completed' || status === 'aborted') {
         if (particleNetwork) {
           particleNetwork.triggerBlast();
@@ -1312,7 +1325,7 @@ document.addEventListener('DOMContentLoaded', () => {
           particleNetwork.startCalm();
         }
       }
-      
+
       if (studentsResults.length > 0) {
         exportQuickBtns.forEach(btn => btn.disabled = false);
       }
@@ -1329,7 +1342,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const isScraping = progress.status === 'scraping' || progress.status === 'starting';
     const current = isScraping ? Math.max(0, progress.current - 1) : progress.current;
-    
+
     if (progress.isOpenEnded) {
       if (isScraping) {
         progressCounts.textContent = `${current} Students fetched (Scanning...)`;
@@ -1350,14 +1363,14 @@ document.addEventListener('DOMContentLoaded', () => {
       progressPercent.textContent = `${pct}%`;
       progressBarFill.classList.remove('indeterminate');
       progressBarFill.style.width = `${pct}%`;
-      
+
       console.log(`[Progress Update] pct=${pct}%, status=${progress.status}, sfxPlayedForThisJob=${sfxPlayedForThisJob}`);
-      
+
       if (pct === 100 && progress.status === 'completed' && studentsResults.length > 0 && !sfxPlayedForThisJob) {
         console.log(`[Progress Update] 100% reached with results. Triggering success sequence...`);
         sfxPlayedForThisJob = true;
         playSFX(sfxSuccess);
-        
+
         setTimeout(() => {
           const tabsCard = document.querySelector('.tabs-card');
           if (tabsCard) {
@@ -1374,7 +1387,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function createStudentRow(student) {
     if (!student) return null;
     const row = document.createElement('tr');
-    
+
     if (student.error) {
       row.className = 'failed-scrape-row';
       row.innerHTML = `
@@ -1398,7 +1411,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <td>${student.cgpa || 'N/A'}</td>
         <td><span class="badge ${badgeClass}">${student.status || 'PASS'}</span></td>
       `;
-      
+
       row.addEventListener('click', () => {
         openReportCardModal(student);
       });
@@ -1411,7 +1424,7 @@ document.addEventListener('DOMContentLoaded', () => {
     tableBody.innerHTML = '';
     const filtered = getFilteredResults();
     const validResults = filtered.filter(r => r);
-    
+
     if (validResults.length === 0) {
       tableBody.innerHTML = `
         <tr class="placeholder-row">
@@ -1441,7 +1454,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function calculateAnalytics() {
     const filtered = getFilteredResults();
     const successful = filtered.filter(r => r && !r.error);
-    
+
     let passedCount = 0;
     let graceCount = 0;
     let failedCount = 0;
@@ -1452,7 +1465,7 @@ document.addEventListener('DOMContentLoaded', () => {
         failedCount++;
         return;
       }
-      
+
       const statusText = String(student.status || 'PASS').toUpperCase();
       if (statusText.includes('FAIL')) {
         failedCount++;
@@ -1542,7 +1555,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     const prevSelectVal = subjectSelect.value;
     subjectSelect.innerHTML = '';
-    
+
     if (sortedSubjects.length === 0) {
       const opt = document.createElement('option');
       opt.value = '';
@@ -1584,13 +1597,13 @@ document.addEventListener('DOMContentLoaded', () => {
       'A+': 0, 'A': 0, 'B+': 0, 'B': 0, 'C+': 0, 'C': 0, 'D': 0, 'F': 0,
       'ABS': 0, 'NA': 0
     };
-    
+
     successful.forEach(res => {
       if (res.subjects) {
         const subInfo = res.subjects.find(s => (s.subject || s.subjectCode) === currentSelectedSubject);
         if (subInfo && subInfo.grade) {
           let grade = subInfo.grade.trim().toUpperCase();
-          
+
           if (grade.includes('ABS') || grade === 'AB') {
             gradeCounts['ABS']++;
           } else if (grade === 'NA') {
@@ -1610,12 +1623,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const maxCount = Math.max(...Object.values(gradeCounts), 1);
     subjectsChartContainer.innerHTML = '';
-    
+
     const gradesOrder = ['A+', 'A', 'B+', 'B', 'C+', 'C', 'D', 'F', 'ABS', 'NA'];
     gradesOrder.forEach(grd => {
       const count = gradeCounts[grd];
       const heightPercent = (count / maxCount) * 100;
-      
+
       const barWrapper = document.createElement('div');
       barWrapper.className = 'chart-bar-wrapper';
       barWrapper.innerHTML = `
@@ -1645,10 +1658,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const type = '1';
     const startNumRaw = String(rangeStartInput.value || '').trim();
     const endNumRaw = String(rangeEndInput.value || '').trim();
-    
+
     const startNum = startNumRaw ? startNumRaw.padStart(3, '0') : '___';
     const endNum = endNumRaw ? endNumRaw.padStart(3, '0') : '___';
-    
+
     const branches = branchRaw.split(',').map(b => b.trim().toUpperCase()).filter(Boolean);
     if (branches.length <= 1) {
       const br = branches[0] || '__';
@@ -1695,7 +1708,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (filterVal !== 'ALL') {
       filtered = studentsResults.filter(r => r && r.enrollId && r.enrollId.substring(4, 6).toUpperCase() === filterVal);
     }
-    
+
     return [...filtered].sort((a, b) => {
       if (!a || !b) return 0;
       let valA = a[currentSortCol];
@@ -1721,7 +1734,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const successCount = filtered.filter(r => r && !r.error).length;
     const errorCount = filtered.filter(r => r && r.error).length;
     const totalCount = filtered.filter(r => r).length;
-    
+
     if (totalCount === 0) {
       resultsCount.textContent = '0 student records found';
     } else {
@@ -1732,18 +1745,18 @@ document.addEventListener('DOMContentLoaded', () => {
   // Synchronizes available branches select filter matching loaded student records
   function updateBranchFilterDropdown() {
     const branches = Array.from(new Set(studentsResults.map(r => r && r.enrollId ? r.enrollId.substring(4, 6).toUpperCase() : null).filter(Boolean))).sort();
-    
+
     if (JSON.stringify(branches) === JSON.stringify(activeBranchesList)) {
       return;
     }
     activeBranchesList = branches;
-    
+
     const select = document.getElementById('branchFilter');
     const wrapper = document.getElementById('branchFilterWrapper');
     const currentSelection = select.value || 'ALL';
-    
+
     select.innerHTML = '<option value="ALL">All Branches</option>';
-    
+
     if (branches.length > 1) {
       wrapper.classList.remove('hidden');
       branches.forEach(br => {
@@ -1757,7 +1770,7 @@ document.addEventListener('DOMContentLoaded', () => {
       wrapper.classList.add('hidden');
       select.value = 'ALL';
     }
-    
+
     updateExportDropdown(branches);
   }
 
@@ -1765,7 +1778,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function updateExportDropdown(branches) {
     const menu = document.getElementById('exportDropdown');
     menu.innerHTML = '';
-    
+
     const buildGroup = (label, branchVal) => {
       const header = document.createElement('div');
       header.className = 'dropdown-header';
@@ -1778,13 +1791,13 @@ document.addEventListener('DOMContentLoaded', () => {
       header.style.marginTop = menu.children.length > 0 ? '0.3rem' : '0';
       header.textContent = label;
       menu.appendChild(header);
-      
+
       const formats = [
         { type: 'xlsx', text: 'Excel Document (.xlsx)' },
         { type: 'csv', text: 'CSV Table (.csv)' },
         { type: 'json', text: 'JSON File (.json)' }
       ];
-      
+
       formats.forEach(f => {
         const btn = document.createElement('button');
         btn.className = 'dropdown-item';
@@ -1799,7 +1812,7 @@ document.addEventListener('DOMContentLoaded', () => {
         menu.appendChild(btn);
       });
     };
-    
+
     if (branches.length > 1) {
       branches.forEach(br => {
         buildGroup(`${br} Branch`, br);
@@ -1939,22 +1952,22 @@ document.addEventListener('DOMContentLoaded', () => {
       this.mode = 'particles';
       this.speedMultiplier = 0.65;
       this.isBlast = false;
-      
+
       // Load custom background matrix sizes
       this.idleSize = parseFloat(localStorage.getItem('rgpv_matrix_idle_size') || '200');
       this.activeSize = parseFloat(localStorage.getItem('rgpv_matrix_active_size') || '300');
-      
+
       this.cycleInterval = null;
       this.modesList = ['particles', 'rings', 'waves', 'grid'];
       this.currentCycleIndex = 0;
-      
+
       this.particles = [];
       this.maxParticles = 65;
-      
+
       this.ringAngle = 0;
       this.waveOffset = 0;
       this.gridOffset = 0;
-      
+
       window.addEventListener('resize', () => {
         if (this.active) this.resizeCanvas();
       });
@@ -1970,12 +1983,12 @@ document.addEventListener('DOMContentLoaded', () => {
     setMode(mode) {
       const oldMode = this.mode;
       this.mode = mode;
-      
+
       if (mode !== 'random' && this.cycleInterval) {
         clearInterval(this.cycleInterval);
         this.cycleInterval = null;
       }
-      
+
       if (mode === 'random' && oldMode !== 'random') {
         this.startCycleMode();
       }
@@ -1997,7 +2010,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     initModeState() {
       const activeMode = this.mode === 'random' ? this.modesList[this.currentCycleIndex] : this.mode;
-      
+
       if (activeMode === 'particles') {
         this.particles = [];
         for (let i = 0; i < this.maxParticles; i++) {
@@ -2011,11 +2024,11 @@ document.addEventListener('DOMContentLoaded', () => {
       this.active = true;
       this.canvas.classList.add('active');
       this.resizeCanvas();
-      
+
       const matrixBgEnabled = localStorage.getItem('rgpv_matrix_bg_enabled') !== 'false';
       const savedAnim = matrixBgEnabled ? (localStorage.getItem('rgpv_fetch_custom_anim') || 'particles') : 'none';
       this.setMode(savedAnim);
-      
+
       this.initModeState();
       this.animate();
     }
@@ -2062,12 +2075,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     animate() {
       if (!this.active && !this.animationFrameId) return;
-      
+
       this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-      
+
       const activeMode = this.mode === 'random' ? this.modesList[this.currentCycleIndex] : this.mode;
       const isDark = document.body.classList.contains('dark-theme');
-      
+
       // Apply shadow glow in dark mode for extra tech aesthetics!
       if (isDark) {
         this.ctx.shadowBlur = this.isBlast ? 12 : 6;
@@ -2076,7 +2089,7 @@ document.addEventListener('DOMContentLoaded', () => {
         this.ctx.shadowBlur = 0;
         this.ctx.shadowColor = 'transparent';
       }
-      
+
       if (activeMode === 'none') {
         // Render empty
       } else if (activeMode === 'particles') {
@@ -2088,7 +2101,7 @@ document.addEventListener('DOMContentLoaded', () => {
       } else if (activeMode === 'grid') {
         this.drawGrid(isDark);
       }
-      
+
       if (this.active || this.animationFrameId) {
         this.animationFrameId = requestAnimationFrame(() => this.animate());
       }
@@ -2098,13 +2111,13 @@ document.addEventListener('DOMContentLoaded', () => {
       const sizeFactor = (this.isMining ? this.activeSize : this.idleSize) / 100;
       const particleColor = isDark ? 'rgba(0, 240, 255, 0.65)' : 'rgba(37, 99, 235, 0.4)';
       const connectionDistance = (this.isBlast ? 180 : 115) * Math.sqrt(sizeFactor);
-      
+
       for (let i = 0; i < this.particles.length; i++) {
         const p = this.particles[i];
         p.update(this.canvas.width, this.canvas.height, this.speedMultiplier);
         p.draw(this.ctx, particleColor, this.isBlast, sizeFactor);
       }
-      
+
       this.ctx.lineWidth = (this.isBlast ? 2.5 : 1) * Math.sqrt(sizeFactor);
       for (let i = 0; i < this.particles.length; i++) {
         for (let j = i + 1; j < this.particles.length; j++) {
@@ -2113,10 +2126,10 @@ document.addEventListener('DOMContentLoaded', () => {
           const dx = p1.x - p2.x;
           const dy = p1.y - p2.y;
           const dist = Math.sqrt(dx * dx + dy * dy);
-          
+
           if (dist < connectionDistance) {
             const alpha = (1 - dist / connectionDistance) * (isDark ? (this.isBlast ? 0.55 : 0.28) : (this.isBlast ? 0.38 : 0.18));
-            this.ctx.strokeStyle = isDark 
+            this.ctx.strokeStyle = isDark
               ? `rgba(0, 240, 255, ${alpha})`
               : `rgba(37, 99, 235, ${alpha})`;
             this.ctx.beginPath();
@@ -2133,29 +2146,29 @@ document.addEventListener('DOMContentLoaded', () => {
       const centerX = this.canvas.width / 2;
       const centerY = this.canvas.height / 2;
       const maxRadius = Math.max(this.canvas.width, this.canvas.height) * (this.isBlast ? 0.8 : 0.65);
-      
+
       this.ringAngle += (this.isBlast ? 0.012 : 0.003) * this.speedMultiplier;
-      
+
       this.ctx.lineWidth = (this.isBlast ? 3.0 : 1.5) * Math.sqrt(sizeFactor);
-      
+
       const numRings = this.isBlast ? 7 : 5;
       for (let i = 1; i <= numRings; i++) {
         const r = (maxRadius / numRings) * i;
         const alpha = (1 - (r / maxRadius)) * (isDark ? (this.isBlast ? 0.65 : 0.38) : (this.isBlast ? 0.45 : 0.22));
-        this.ctx.strokeStyle = isDark 
+        this.ctx.strokeStyle = isDark
           ? `rgba(0, 240, 255, ${alpha})`
           : `rgba(37, 99, 235, ${alpha})`;
-        
+
         const pulseRadius = r + Math.sin(this.ringAngle * 2 + i) * (this.isBlast ? 40 : 15);
-        
+
         this.ctx.beginPath();
         this.ctx.arc(centerX, centerY, pulseRadius, 0, Math.PI * 2);
         this.ctx.stroke();
-        
+
         this.ctx.save();
         this.ctx.translate(centerX, centerY);
         this.ctx.rotate(this.ringAngle * (i % 2 === 0 ? 1.5 : -1));
-        
+
         this.ctx.fillStyle = isDark ? 'rgba(217, 70, 239, 0.68)' : 'rgba(14, 165, 233, 0.5)';
         this.ctx.beginPath();
         this.ctx.arc(pulseRadius, 0, (this.isBlast ? 8 : 4) * sizeFactor, 0, Math.PI * 2);
@@ -2168,23 +2181,23 @@ document.addEventListener('DOMContentLoaded', () => {
       const sizeFactor = (this.isMining ? this.activeSize : this.idleSize) / 100;
       this.waveOffset += (this.isBlast ? 0.05 : 0.015) * this.speedMultiplier;
       const waveCount = this.isBlast ? 5 : 3;
-      
+
       for (let w = 0; w < waveCount; w++) {
         const alpha = (1 - w / waveCount) * (isDark ? (this.isBlast ? 0.55 : 0.28) : (this.isBlast ? 0.38 : 0.18));
-        this.ctx.strokeStyle = isDark 
-          ? `rgba(217, 70, 239, ${alpha})` 
+        this.ctx.strokeStyle = isDark
+          ? `rgba(217, 70, 239, ${alpha})`
           : `rgba(14, 165, 233, ${alpha})`;
         this.ctx.lineWidth = ((this.isBlast ? 3.5 : 1.8) - w * 0.4) * Math.sqrt(sizeFactor);
-        
+
         this.ctx.beginPath();
         const amplitude = ((this.isBlast ? 75 : 30) + w * 15) * sizeFactor;
         const frequency = (0.0015 + w * 0.0005) / Math.sqrt(sizeFactor);
-        
+
         for (let x = 0; x < this.canvas.width; x += 10) {
-          const y = (this.canvas.height * 0.5) + 
-                    Math.sin(x * frequency + this.waveOffset + w) * amplitude +
-                    Math.cos(x * 0.0008 - this.waveOffset * 0.5) * (amplitude * 0.5);
-          
+          const y = (this.canvas.height * 0.5) +
+            Math.sin(x * frequency + this.waveOffset + w) * amplitude +
+            Math.cos(x * 0.0008 - this.waveOffset * 0.5) * (amplitude * 0.5);
+
           if (x === 0) {
             this.ctx.moveTo(x, y);
           } else {
@@ -2200,32 +2213,32 @@ document.addEventListener('DOMContentLoaded', () => {
       this.gridOffset += (this.isBlast ? 4.5 : 1.2) * this.speedMultiplier;
       const cellWidth = 80 * sizeFactor;
       const cellHeight = 80 * sizeFactor;
-      
+
       this.ctx.lineWidth = (this.isBlast ? 2.5 : 1) * Math.sqrt(sizeFactor);
-      this.ctx.strokeStyle = isDark 
-        ? `rgba(0, 240, 255, ${this.isBlast ? 0.45 : 0.18})` 
+      this.ctx.strokeStyle = isDark
+        ? `rgba(0, 240, 255, ${this.isBlast ? 0.45 : 0.18})`
         : `rgba(37, 99, 235, ${this.isBlast ? 0.32 : 0.12})`;
-      
+
       const horizon = this.canvas.height * (this.isBlast ? 0.3 : 0.45);
       const linesCount = 20;
-      
+
       for (let i = 0; i < linesCount; i++) {
         const yRatio = i / linesCount;
         const y = horizon + Math.pow(yRatio, 2.5) * (this.canvas.height - horizon) + (this.gridOffset % cellHeight) * yRatio;
         if (y < horizon || y > this.canvas.height) continue;
-        
+
         this.ctx.beginPath();
         this.ctx.moveTo(0, y);
         this.ctx.lineTo(this.canvas.width, y);
         this.ctx.stroke();
       }
-      
+
       const cols = 26;
       const centerX = this.canvas.width / 2;
-      for (let i = -cols/2; i <= cols/2; i++) {
+      for (let i = -cols / 2; i <= cols / 2; i++) {
         const startX = centerX + i * cellWidth;
         const endX = centerX + i * cellWidth * 4;
-        
+
         this.ctx.beginPath();
         this.ctx.moveTo(startX, horizon);
         this.ctx.lineTo(endX, this.canvas.height);
@@ -2247,7 +2260,7 @@ document.addEventListener('DOMContentLoaded', () => {
     update(w, h, speedMult = 1.0) {
       this.x += this.vx * speedMult;
       this.y += this.vy * speedMult;
-      
+
       if (this.x < 0) this.x = w;
       if (this.x > w) this.x = 0;
       if (this.y < 0) this.y = h;
@@ -2267,17 +2280,17 @@ document.addEventListener('DOMContentLoaded', () => {
   function triggerRadialThemeTransition(isDark) {
     const ripple = document.createElement('div');
     ripple.className = 'theme-transition-ripple';
-    
+
     // Set dynamic target background color matching light/dark base themes
     ripple.style.setProperty('--target-bg', isDark ? '#050811' : '#e8eff7');
-    
+
     document.body.appendChild(ripple);
-    
+
     // Force reflow
     ripple.offsetHeight;
-    
+
     ripple.classList.add('active');
-    
+
     setTimeout(() => {
       document.body.classList.toggle('dark-theme', isDark);
       const themeToggle = document.getElementById('themeToggle');
@@ -2285,19 +2298,19 @@ document.addEventListener('DOMContentLoaded', () => {
       if (themeIcon) {
         themeIcon.textContent = isDark ? '☀️' : '🌙';
       }
-      
+
       const themeToggleLabel = document.getElementById('themeToggleLabel');
       if (themeToggleLabel) {
         themeToggleLabel.textContent = isDark ? 'Space Dark' : 'Light Blueprint';
       }
-      
+
       localStorage.setItem('theme', isDark ? 'dark' : 'light');
     }, 1300);
-    
+
     setTimeout(() => {
       ripple.classList.add('fade-out');
     }, 1800);
-    
+
     setTimeout(() => {
       ripple.remove();
     }, 2600);
