@@ -98,10 +98,10 @@ document.addEventListener('DOMContentLoaded', () => {
   let previousJobStatus = 'idle';
   let sfxPlayedForThisJob = false;
 
-  const sfxConfirm = new Audio('sfx/are you sure about that.wav');
-  const sfxSuccess = new Audio('sfx/hehe boi.wav');
-  const sfxCook = new Audio('sfx/Let him cook now.wav');
-  const sfxFahh = new Audio('sfx/FAHH.mp3');
+  const sfxConfirm = new Audio('sfx/funmode_are_you_sure_abour_that.wav');
+  const sfxSuccess = new Audio('sfx/funmode_hehe_boi.wav');
+  const sfxCook = new Audio('sfx/funmode_let_him_cook_now.wav');
+  const sfxFahh = new Audio('sfx/funmode_fahh.mp3');
 
   // Global document interaction listener to unlock all Audio objects for autoplay
   function unlockAudioContexts() {
