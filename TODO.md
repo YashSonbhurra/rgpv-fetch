@@ -1,0 +1,11 @@
+## TODOs
+- [UI] Add favicon.ico
+- [UI] Add GitHub and NPM hooks
+- [Library] Bump jimp and switch from uing xlsx to exceljs
+- [Library] Add worksheet and column styling functionality for Excel exports
+- [Bug] Avoid caching not-found results
+- [Bug] Raise semester limit to 10
+- [Feature] Add branch dropdown and map branch/subject codes to names
+- [Feature] Find mode: Search by individual name
+- [Feature] Watcher: Check if results are available for a list of courses or semesters
+- [Improvement] Handle situations of excessive traffic on RGPV
