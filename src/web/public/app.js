@@ -58,6 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const matrixActiveSizeSlider = document.getElementById('matrixActiveSizeSlider');
   const matrixActiveSizeDisplay = document.getElementById('matrixActiveSizeDisplay');
   const scannerUiToggle = document.getElementById('scannerUiToggle');
+  const perfPillButtons = document.querySelectorAll('.perf-pill-btn');
 
   const avgSgpaVal = document.getElementById('avgSgpaVal');
   const sgpaGaugeFill = document.getElementById('sgpaGaugeFill');
@@ -166,6 +167,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEventSource();
     particleNetwork = new BackgroundMatrix('particleCanvas');
     particleNetwork.start();
+    monitorPerformance();
   }
 
   // Setup change event listener for subject select dropdown
@@ -555,6 +557,10 @@ document.addEventListener('DOMContentLoaded', () => {
       settingsToggleBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         settingsDrawer.classList.toggle('hidden');
+        if (!settingsDrawer.classList.contains('hidden')) {
+          const savedProfile = localStorage.getItem('rgpv_perf_profile') || 'auto';
+          setPillActive(savedProfile);
+        }
       });
 
       document.addEventListener('click', (e) => {
@@ -611,6 +617,60 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
+    function setPillActive(val) {
+      let activeIdx = 0;
+      let activeBtn = null;
+      perfPillButtons.forEach((btn, idx) => {
+        if (btn.getAttribute('data-value') === val) {
+          btn.classList.add('active');
+          activeBtn = btn;
+          activeIdx = idx;
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+
+      const slider = document.querySelector('.perf-pill-slider');
+      if (slider && perfPillButtons.length > 0) {
+        if (activeBtn && activeBtn.offsetWidth > 0) {
+          // Precise coordinate-based positioning when drawer is visible
+          const offsetLeft = activeBtn.offsetLeft;
+          const offsetWidth = activeBtn.offsetWidth;
+          slider.style.width = `${offsetWidth}px`;
+          slider.style.transform = `translateX(${offsetLeft - 3}px)`; // offset by 3px padding
+        } else {
+          // Percentage-based fallback on startup if drawer is hidden
+          const widthPercent = 100 / perfPillButtons.length;
+          slider.style.width = `calc(${widthPercent}% - 6px)`;
+          slider.style.transform = `translateX(calc(${activeIdx * 100}% + ${activeIdx * 4}px))`;
+        }
+      }
+    }
+
+    if (perfPillButtons.length > 0) {
+      perfPillButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const val = btn.getAttribute('data-value');
+          localStorage.setItem('rgpv_perf_profile', val);
+          localStorage.removeItem('rgpv_perf_auto_downgraded');
+          if (val === 'auto') monitorPerformance();                                                                                                   
+          setPillActive(val);
+          applyPerformanceProfile(val);
+        });
+      });
+      const savedProfile = localStorage.getItem('rgpv_perf_profile') || 'auto';
+      setPillActive(savedProfile);
+      applyPerformanceProfile(savedProfile);
+
+      // Recalculate slider coordinates on window resize when drawer is open
+      window.addEventListener('resize', () => {
+        if (!settingsDrawer.classList.contains('hidden')) {
+          const savedProfile = localStorage.getItem('rgpv_perf_profile') || 'auto';
+          setPillActive(savedProfile);
+        }
+      });
+    }
+
     if (fullResetBtn) {
       fullResetBtn.addEventListener('click', async () => {
         playSFX(sfxConfirm);
@@ -629,6 +689,8 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.removeItem('rgpv_fetch_custom_font_size');
         localStorage.removeItem('rgpv_fetch_custom_anim');
         localStorage.removeItem('theme');
+        localStorage.removeItem('rgpv_perf_profile');
+        localStorage.removeItem('rgpv_perf_auto_downgraded');
 
         if (fontSelect) {
           fontSelect.value = 'Outfit';
@@ -646,6 +708,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (animationSelect) {
           animationSelect.value = 'particles';
         }
+        if (perfPillButtons.length > 0) {
+          setPillActive('auto');
+        }
+        applyPerformanceProfile('auto');
+
         if (particleNetwork) {
           particleNetwork.setMode('particles');
           particleNetwork.startCalm();
@@ -736,11 +803,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
       sfxToggle.addEventListener('change', () => {
         const enabled = sfxToggle.checked;
-        
+
         if (enabled) {
           localStorage.setItem('rgpv_fetch_sfx_enabled', 'true');
           playSFX(sfxSuccess);
-          
+
           sfxVolumeContainer.classList.remove('hidden', 'thanos-snap');
           sfxVolumeContainer.classList.add('thanos-assemble');
           setTimeout(() => {
@@ -753,10 +820,10 @@ document.addEventListener('DOMContentLoaded', () => {
           const vol = parseFloat(localStorage.getItem('rgpv_fetch_sfx_volume') ?? '70') / 100;
           sfxBye.volume = vol;
           sfxBye.currentTime = 0;
-          sfxBye.play().catch(() => {});
-          
+          sfxBye.play().catch(() => { });
+
           localStorage.setItem('rgpv_fetch_sfx_enabled', 'false');
-          
+
           sfxVolumeContainer.classList.remove('thanos-assemble');
           sfxVolumeContainer.classList.add('thanos-snap');
           setTimeout(() => {
@@ -1941,6 +2008,137 @@ document.addEventListener('DOMContentLoaded', () => {
     return secs === 0 ? `${mins}m` : `${mins}m ${secs}s`;
   }
 
+  // Applies the visual and parameter overrides for the selected Performance Profile
+  function applyPerformanceProfile(profile) {
+    if (profile === 'low') {
+      document.body.classList.add('performance-mode');
+    } else if (profile === 'high') {
+      document.body.classList.remove('performance-mode');
+    } else {
+      // 'auto' mode: check if it was auto-downgraded by performance monitoring
+      const autoDowngraded = localStorage.getItem('rgpv_perf_auto_downgraded') === 'true';
+      if (autoDowngraded) {
+        document.body.classList.add('performance-mode');
+      } else {
+        document.body.classList.remove('performance-mode');
+      }
+    }
+
+    if (particleNetwork) {
+      particleNetwork.initModeState();
+    }
+  }
+
+  // Monitors browser rendering frames to detect sluggish devices and automatically apply Eco mode
+  function monitorPerformance() {
+    const savedProfile = localStorage.getItem('rgpv_perf_profile') || 'auto';
+    if (savedProfile !== 'auto') return;
+
+    if (localStorage.getItem('rgpv_perf_auto_downgraded') === 'true') {
+      document.body.classList.add('performance-mode');
+      return;
+    }
+
+    let frameCount = 0;
+    let totalFrameTime = 0;
+    let lastTime = performance.now();
+    const maxFrames = 120; // monitor for ~2 seconds
+
+    function measureFrame() {
+      // If user switched away from auto in the middle of monitoring, abort
+      const currentProfile = localStorage.getItem('rgpv_perf_profile') || 'auto';
+      if (currentProfile !== 'auto') return;
+
+      const now = performance.now();
+      const delta = now - lastTime;
+      lastTime = now;
+
+      // Skip the first 10 frames to let startup initialization settle down
+      if (frameCount > 10) {
+        totalFrameTime += delta;
+      }
+      frameCount++;
+
+      if (frameCount < maxFrames) {
+        requestAnimationFrame(measureFrame);
+      } else {
+        const avgFrameTime = totalFrameTime / (maxFrames - 11);
+        console.log(`[Performance Monitor] Average frame duration: ${avgFrameTime.toFixed(2)}ms`);
+
+        // If average frame duration is greater than 14ms (dropping below 50-55 FPS consistently), downgrade to Eco mode
+        if (avgFrameTime > 14) {
+          console.warn(`[Performance Monitor] Low performance detected (${(1000 / avgFrameTime).toFixed(1)} FPS). Auto-enabling Eco Mode.`);
+          localStorage.setItem('rgpv_perf_auto_downgraded', 'true');
+          applyPerformanceProfile('auto');
+          showPerformanceToast();
+        }
+      }
+    }
+
+    requestAnimationFrame(measureFrame);
+  }
+
+  // Renders a sleek, self-dismissing toast notification when Eco mode is auto-enabled
+  function showPerformanceToast() {
+    // If a performance toast is already visible, don't duplicate it
+    if (document.getElementById('perfToastContainer')) return;
+
+    const toast = document.createElement('div');
+    toast.id = 'perfToastContainer';
+    toast.style.cssText = `
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: rgba(12, 17, 34, 0.95);
+      border: 1px solid var(--accent-primary);
+      box-shadow: 0 0 15px rgba(0, 240, 255, 0.25);
+      border-radius: 8px;
+      padding: 12px 18px;
+      color: var(--text-main);
+      font-family: var(--font-main), sans-serif;
+      font-size: 0.8rem;
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    `;
+
+    toast.innerHTML = `
+      <span style="font-size: 1.2rem;">🔋</span>
+      <div style="flex-grow: 1;">
+        <div style="font-weight: 700; color: var(--accent-primary);">Eco Mode Activated</div>
+        <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; max-width: 250px; line-height: 1.3;">Performance settings optimized to maintain 60 FPS on your system.</div>
+      </div>
+      <button id="perfToastDismiss" style="background: rgba(0, 240, 255, 0.1); border: 1px solid rgba(0, 240, 255, 0.2); color: var(--accent-primary); cursor: pointer; font-size: 0.72rem; font-weight: 700; padding: 4px 8px; border-radius: 4px; transition: all 0.2s;">
+        Got it
+      </button>
+    `;
+
+    document.body.appendChild(toast);
+
+    // Force reflow
+    toast.offsetHeight;
+
+    // Slide/fade in
+    toast.style.transform = 'translateY(0)';
+    toast.style.opacity = '1';
+
+    const dismissBtn = toast.querySelector('#perfToastDismiss');
+    const dismissToast = () => {
+      toast.style.transform = 'translateY(40px)';
+      toast.style.opacity = '0';
+      setTimeout(() => toast.remove(), 400);
+    };
+
+    dismissBtn.addEventListener('click', dismissToast);
+
+    // Auto dismiss after 8 seconds
+    setTimeout(dismissToast, 8000);
+  }
+
   // GPU-friendly, high-performance Canvas Background Matrix animation engine
   class BackgroundMatrix {
     constructor(canvasId) {
@@ -1973,6 +2171,10 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
+    isEcoMode() {
+      return document.body.classList.contains('performance-mode');
+    }
+
     resizeCanvas() {
       if (this.canvas) {
         this.canvas.width = window.innerWidth;
@@ -1995,6 +2197,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (this.active) {
         this.initModeState();
+        if (mode !== 'none' && !this.animationFrameId) {
+          this.animate();
+        }
       }
     }
 
@@ -2013,7 +2218,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (activeMode === 'particles') {
         this.particles = [];
-        for (let i = 0; i < this.maxParticles; i++) {
+        const count = this.isEcoMode() ? 25 : this.maxParticles;
+        for (let i = 0; i < count; i++) {
           this.particles.push(new Particle(this.canvas.width, this.canvas.height));
         }
       }
@@ -2030,7 +2236,9 @@ document.addEventListener('DOMContentLoaded', () => {
       this.setMode(savedAnim);
 
       this.initModeState();
-      this.animate();
+      if (savedAnim !== 'none') {
+        this.animate();
+      }
     }
 
     startCalm() {
@@ -2076,13 +2284,22 @@ document.addEventListener('DOMContentLoaded', () => {
     animate() {
       if (!this.active && !this.animationFrameId) return;
 
+      const activeMode = this.mode === 'random' ? this.modesList[this.currentCycleIndex] : this.mode;
+
+      // Halt the animation frame request if mode is none to save CPU/GPU!
+      if (activeMode === 'none') {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.animationFrameId = null;
+        return;
+      }
+
       this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-      const activeMode = this.mode === 'random' ? this.modesList[this.currentCycleIndex] : this.mode;
       const isDark = document.body.classList.contains('dark-theme');
+      const eco = this.isEcoMode();
 
-      // Apply shadow glow in dark mode for extra tech aesthetics!
-      if (isDark) {
+      // Apply shadow glow in dark mode for extra tech aesthetics! (Skip in Eco Mode)
+      if (isDark && !eco) {
         this.ctx.shadowBlur = this.isBlast ? 12 : 6;
         this.ctx.shadowColor = 'rgba(0, 240, 255, 0.65)';
       } else {
@@ -2090,16 +2307,14 @@ document.addEventListener('DOMContentLoaded', () => {
         this.ctx.shadowColor = 'transparent';
       }
 
-      if (activeMode === 'none') {
-        // Render empty
-      } else if (activeMode === 'particles') {
-        this.drawParticles(isDark);
+      if (activeMode === 'particles') {
+        this.drawParticles(isDark, eco);
       } else if (activeMode === 'rings') {
-        this.drawRings(isDark);
+        this.drawRings(isDark, eco);
       } else if (activeMode === 'waves') {
-        this.drawWaves(isDark);
+        this.drawWaves(isDark, eco);
       } else if (activeMode === 'grid') {
-        this.drawGrid(isDark);
+        this.drawGrid(isDark, eco);
       }
 
       if (this.active || this.animationFrameId) {
@@ -2107,10 +2322,25 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    drawParticles(isDark) {
+    drawParticles(isDark, eco) {
       const sizeFactor = (this.isMining ? this.activeSize : this.idleSize) / 100;
       const particleColor = isDark ? 'rgba(0, 240, 255, 0.65)' : 'rgba(37, 99, 235, 0.4)';
-      const connectionDistance = (this.isBlast ? 180 : 115) * Math.sqrt(sizeFactor);
+      
+      // Decrease connection distance in Eco Mode to restrict comparison overhead
+      const baseDistance = eco ? 70 : (this.isBlast ? 180 : 115);
+      const connectionDistance = baseDistance * Math.sqrt(sizeFactor);
+
+      // Verify particle count aligns with current Eco setting
+      const targetCount = eco ? 25 : this.maxParticles;
+      if (this.particles.length !== targetCount) {
+        if (this.particles.length > targetCount) {
+          this.particles = this.particles.slice(0, targetCount);
+        } else {
+          while (this.particles.length < targetCount) {
+            this.particles.push(new Particle(this.canvas.width, this.canvas.height));
+          }
+        }
+      }
 
       for (let i = 0; i < this.particles.length; i++) {
         const p = this.particles[i];
@@ -2125,13 +2355,18 @@ document.addEventListener('DOMContentLoaded', () => {
           const p2 = this.particles[j];
           const dx = p1.x - p2.x;
           const dy = p1.y - p2.y;
+
+          // Fast pruning check before expensive Math.sqrt calculation!
+          if (Math.abs(dx) > connectionDistance || Math.abs(dy) > connectionDistance) continue;
+
           const dist = Math.sqrt(dx * dx + dy * dy);
 
           if (dist < connectionDistance) {
             const alpha = (1 - dist / connectionDistance) * (isDark ? (this.isBlast ? 0.55 : 0.28) : (this.isBlast ? 0.38 : 0.18));
+            const finalAlpha = eco ? alpha * 0.5 : alpha;
             this.ctx.strokeStyle = isDark
-              ? `rgba(0, 240, 255, ${alpha})`
-              : `rgba(37, 99, 235, ${alpha})`;
+              ? `rgba(0, 240, 255, ${finalAlpha})`
+              : `rgba(37, 99, 235, ${finalAlpha})`;
             this.ctx.beginPath();
             this.ctx.moveTo(p1.x, p1.y);
             this.ctx.lineTo(p2.x, p2.y);
@@ -2141,7 +2376,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    drawRings(isDark) {
+    drawRings(isDark, eco) {
       const sizeFactor = (this.isMining ? this.activeSize : this.idleSize) / 100;
       const centerX = this.canvas.width / 2;
       const centerY = this.canvas.height / 2;
@@ -2151,7 +2386,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
       this.ctx.lineWidth = (this.isBlast ? 3.0 : 1.5) * Math.sqrt(sizeFactor);
 
-      const numRings = this.isBlast ? 7 : 5;
+      // Reduce ring count in Eco Mode
+      const numRings = eco ? (this.isBlast ? 4 : 2) : (this.isBlast ? 7 : 5);
       for (let i = 1; i <= numRings; i++) {
         const r = (maxRadius / numRings) * i;
         const alpha = (1 - (r / maxRadius)) * (isDark ? (this.isBlast ? 0.65 : 0.38) : (this.isBlast ? 0.45 : 0.22));
@@ -2177,10 +2413,12 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    drawWaves(isDark) {
+    drawWaves(isDark, eco) {
       const sizeFactor = (this.isMining ? this.activeSize : this.idleSize) / 100;
       this.waveOffset += (this.isBlast ? 0.05 : 0.015) * this.speedMultiplier;
-      const waveCount = this.isBlast ? 5 : 3;
+      
+      // Reduce wave counts in Eco Mode
+      const waveCount = eco ? (this.isBlast ? 3 : 1) : (this.isBlast ? 5 : 3);
 
       for (let w = 0; w < waveCount; w++) {
         const alpha = (1 - w / waveCount) * (isDark ? (this.isBlast ? 0.55 : 0.28) : (this.isBlast ? 0.38 : 0.18));
@@ -2193,7 +2431,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const amplitude = ((this.isBlast ? 75 : 30) + w * 15) * sizeFactor;
         const frequency = (0.0015 + w * 0.0005) / Math.sqrt(sizeFactor);
 
-        for (let x = 0; x < this.canvas.width; x += 10) {
+        // Increase wave point step to 25px in Eco Mode to cut down trigonometric loop calculations
+        const step = eco ? 25 : 10;
+        for (let x = 0; x < this.canvas.width; x += step) {
           const y = (this.canvas.height * 0.5) +
             Math.sin(x * frequency + this.waveOffset + w) * amplitude +
             Math.cos(x * 0.0008 - this.waveOffset * 0.5) * (amplitude * 0.5);
@@ -2208,7 +2448,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    drawGrid(isDark) {
+    drawGrid(isDark, eco) {
       const sizeFactor = (this.isMining ? this.activeSize : this.idleSize) / 100;
       this.gridOffset += (this.isBlast ? 4.5 : 1.2) * this.speedMultiplier;
       const cellWidth = 80 * sizeFactor;
@@ -2220,7 +2460,9 @@ document.addEventListener('DOMContentLoaded', () => {
         : `rgba(37, 99, 235, ${this.isBlast ? 0.32 : 0.12})`;
 
       const horizon = this.canvas.height * (this.isBlast ? 0.3 : 0.45);
-      const linesCount = 20;
+      
+      // Reduce horizontals grid counts in Eco Mode
+      const linesCount = eco ? 10 : 20;
 
       for (let i = 0; i < linesCount; i++) {
         const yRatio = i / linesCount;
@@ -2233,7 +2475,8 @@ document.addEventListener('DOMContentLoaded', () => {
         this.ctx.stroke();
       }
 
-      const cols = 26;
+      // Reduce vertical columns grid counts in Eco Mode
+      const cols = eco ? 14 : 26;
       const centerX = this.canvas.width / 2;
       for (let i = -cols / 2; i <= cols / 2; i++) {
         const startX = centerX + i * cellWidth;
