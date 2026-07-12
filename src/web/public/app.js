@@ -652,9 +652,8 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('click', () => {
           const val = btn.getAttribute('data-value');
           localStorage.setItem('rgpv_perf_profile', val);
-          if (val !== 'auto') {
-            localStorage.removeItem('rgpv_perf_auto_downgraded');
-          }
+          localStorage.removeItem('rgpv_perf_auto_downgraded');
+          if (val === 'auto') monitorPerformance();                                                                                                   
           setPillActive(val);
           applyPerformanceProfile(val);
         });
