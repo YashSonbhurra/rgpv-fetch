@@ -117,11 +117,9 @@ document.addEventListener('DOMContentLoaded', () => {
           })
           .catch(() => { });
       });
-      // Remove listeners once successfully unlocked
       document.removeEventListener('click', unlock);
       document.removeEventListener('keydown', unlock);
       document.removeEventListener('touchstart', unlock);
-      console.log('[SFX] All audio contexts successfully unlocked by user interaction.');
     };
     document.addEventListener('click', unlock);
     document.addEventListener('keydown', unlock);
@@ -132,12 +130,10 @@ document.addEventListener('DOMContentLoaded', () => {
   function playSFX(audio) {
     const enabled = localStorage.getItem('rgpv_fetch_sfx_enabled') !== 'false';
     const vol = parseFloat(localStorage.getItem('rgpv_fetch_sfx_volume') ?? '70') / 100;
-    console.log(`[SFX] playSFX called: src=${audio.src}, enabled=${enabled}, volume=${vol}`);
     if (!enabled) return;
     audio.volume = vol;
     audio.currentTime = 0;
     audio.play()
-      .then(() => console.log(`[SFX] Playback started successfully.`))
       .catch((err) => console.error(`[SFX] Playback failed:`, err));
   }
   let particleNetwork = null;
@@ -389,7 +385,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const centerLimitX = window.innerWidth / 2;
       const centerLimitY = window.innerHeight / 2;
 
-      // Select all major container components and elements
       const elements = document.querySelectorAll('body, header, main, .card, .glass, button, input, select, th, td, h1, h2, h3, h4, p, span, label, .settings-drawer');
 
       elements.forEach(el => {
@@ -415,7 +410,6 @@ document.addEventListener('DOMContentLoaded', () => {
       updateLabel(isDark);
       localStorage.setItem('theme', isDark ? 'dark' : 'light');
 
-      // Clean up transitions after completion
       setTimeout(() => {
         elements.forEach(el => {
           el.style.transition = '';
@@ -450,7 +444,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (res.ok) {
           alert(data.message);
-          // Trigger dustbin fountain animation after alert OK is clicked
           spawnTrashFountain(clearCacheBtn);
         } else {
           alert('Error: ' + (data.error || 'Failed to clear cache'));
@@ -521,9 +514,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
       let x = originX;
       let y = originY;
-      let vx = (Math.random() - 0.5) * 6; // Horizontal velocity
-      let vy = -Math.random() * 8 - 4;     // Upward initial velocity
-      const gravity = 0.4;                // Gravity
+      let vx = (Math.random() - 0.5) * 6;
+      let vy = -Math.random() * 8 - 4;
+      const gravity = 0.4;
       let angle = Math.random() * 360;
       const spin = (Math.random() - 0.5) * 16;
       let opacity = 1.0;
@@ -662,7 +655,6 @@ document.addEventListener('DOMContentLoaded', () => {
       setPillActive(savedProfile);
       applyPerformanceProfile(savedProfile);
 
-      // Recalculate slider coordinates on window resize when drawer is open
       window.addEventListener('resize', () => {
         if (!settingsDrawer.classList.contains('hidden')) {
           const savedProfile = localStorage.getItem('rgpv_perf_profile') || 'auto';
@@ -816,7 +808,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
           }, 800);
         } else {
-          // Play the bye sound effect immediately before turning off the system state
           const vol = parseFloat(localStorage.getItem('rgpv_fetch_sfx_volume') ?? '70') / 100;
           sfxBye.volume = vol;
           sfxBye.currentTime = 0;
@@ -853,7 +844,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    // Matrix Background Toggle & Custom Sizes
     if (matrixBgToggle && matrixSettingsContainer && matrixIdleSizeSlider && matrixIdleSizeDisplay && matrixActiveSizeSlider && matrixActiveSizeDisplay && animationSelect) {
 
       const updateIdleSizeText = (val) => {
@@ -870,7 +860,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       };
 
-      // Load initial values
       const matrixBgEnabled = localStorage.getItem('rgpv_matrix_bg_enabled') !== 'false';
       matrixBgToggle.checked = matrixBgEnabled;
       if (matrixBgEnabled) {
@@ -890,7 +879,6 @@ document.addEventListener('DOMContentLoaded', () => {
       matrixActiveSizeSlider.value = savedActiveSize;
       updateActiveSizeText(savedActiveSize);
 
-      // Listeners for toggle
       matrixBgToggle.addEventListener('change', () => {
         const enabled = matrixBgToggle.checked;
         localStorage.setItem('rgpv_matrix_bg_enabled', enabled);
@@ -924,7 +912,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       });
 
-      // Listeners for sliders
       matrixIdleSizeSlider.addEventListener('input', (e) => {
         updateIdleSizeText(e.target.value);
       });
@@ -940,7 +927,6 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    // Scanning HUD Overlay Toggle
     if (scannerUiToggle) {
       const scannerEnabled = localStorage.getItem('rgpv_scanner_ui_enabled') !== 'false';
       scannerUiToggle.checked = scannerEnabled;
@@ -1023,8 +1009,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const currentStatus = data.status;
       const resultsCount = data.resultsCount ?? (data.results ? data.results.length : 0);
 
-      console.log(`[SSE State] currentStatus=${currentStatus}, previousJobStatus=${previousJobStatus}, resultsCount=${resultsCount}`);
-
       if (currentStatus === 'scraping') {
         if (previousJobStatus !== 'scraping') {
           playSFX(sfxCook);
@@ -1033,14 +1017,12 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       if (currentStatus === 'completed' && (resultsCount > 0 || studentsResults.length > 0) && !sfxPlayedForThisJob) {
-        console.log(`[SSE State] Job completed with results. Triggering success sequence...`);
         sfxPlayedForThisJob = true;
         playSFX(sfxSuccess);
 
         setTimeout(() => {
           const tabsCard = document.querySelector('.tabs-card');
           if (tabsCard) {
-            console.log(`[SSE State] Scrolling window down to results...`);
             const offsetTop = tabsCard.getBoundingClientRect().top + window.scrollY;
             window.scrollTo({ top: offsetTop - 20, behavior: 'smooth' });
           }
@@ -1430,18 +1412,13 @@ document.addEventListener('DOMContentLoaded', () => {
       progressPercent.textContent = `${pct}%`;
       progressBarFill.classList.remove('indeterminate');
       progressBarFill.style.width = `${pct}%`;
-
-      console.log(`[Progress Update] pct=${pct}%, status=${progress.status}, sfxPlayedForThisJob=${sfxPlayedForThisJob}`);
-
       if (pct === 100 && progress.status === 'completed' && studentsResults.length > 0 && !sfxPlayedForThisJob) {
-        console.log(`[Progress Update] 100% reached with results. Triggering success sequence...`);
         sfxPlayedForThisJob = true;
         playSFX(sfxSuccess);
 
         setTimeout(() => {
           const tabsCard = document.querySelector('.tabs-card');
           if (tabsCard) {
-            console.log(`[Progress Update] Scrolling window down to results...`);
             const offsetTop = tabsCard.getBoundingClientRect().top + window.scrollY;
             window.scrollTo({ top: offsetTop - 20, behavior: 'smooth' });
           }
@@ -2063,7 +2040,6 @@ document.addEventListener('DOMContentLoaded', () => {
         requestAnimationFrame(measureFrame);
       } else {
         const avgFrameTime = totalFrameTime / (maxFrames - 11);
-        console.log(`[Performance Monitor] Average frame duration: ${avgFrameTime.toFixed(2)}ms`);
 
         // If average frame duration is greater than 14ms (dropping below 50-55 FPS consistently), downgrade to Eco mode
         if (avgFrameTime > 14) {
@@ -2080,7 +2056,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Renders a sleek, self-dismissing toast notification when Eco mode is auto-enabled
   function showPerformanceToast() {
-    // If a performance toast is already visible, don't duplicate it
     if (document.getElementById('perfToastContainer')) return;
 
     const toast = document.createElement('div');
@@ -2122,7 +2097,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Force reflow
     toast.offsetHeight;
 
-    // Slide/fade in
     toast.style.transform = 'translateY(0)';
     toast.style.opacity = '1';
 
@@ -2135,7 +2109,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     dismissBtn.addEventListener('click', dismissToast);
 
-    // Auto dismiss after 8 seconds
     setTimeout(dismissToast, 8000);
   }
 
@@ -2151,7 +2124,6 @@ document.addEventListener('DOMContentLoaded', () => {
       this.speedMultiplier = 0.65;
       this.isBlast = false;
 
-      // Load custom background matrix sizes
       this.idleSize = parseFloat(localStorage.getItem('rgpv_matrix_idle_size') || '200');
       this.activeSize = parseFloat(localStorage.getItem('rgpv_matrix_active_size') || '300');
 
