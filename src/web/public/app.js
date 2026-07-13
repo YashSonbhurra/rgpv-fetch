@@ -6,7 +6,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const staggerDelayInput = document.getElementById('staggerDelayInput');
   const collegeSelect = document.getElementById('collegeSelect');
   const yearInput = document.getElementById('yearInput');
-  const branchInput = document.getElementById('branchInput');
+  let branchInput = null;
+  let branchesData = null;
+  let pendingSavedBranch = '';
   const rangeStartInput = document.getElementById('rangeStartInput');
   const rangeEndInput = document.getElementById('rangeEndInput');
   const rollInput = document.getElementById('rollInput');
@@ -151,6 +153,10 @@ document.addEventListener('DOMContentLoaded', () => {
     setupExportActions();
     setupSubjectSelect();
     setupInputModeToggle();
+    await loadBranches();
+    courseSelect.addEventListener('change', updateBranchInput);
+    courseSelect.addEventListener('input', updateBranchInput);
+    updateBranchInput();
     setupRangePreview();
     setupLateralToggle();
     setupThemeToggle();
@@ -937,6 +943,85 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // Fetches available RGPV branch configurations from server
+  async function loadBranches() {
+    try {
+      const res = await fetch('/api/branches');
+      branchesData = await res.json();
+    } catch (err) {
+      console.error('Failed to load branches:', err);
+    }
+  }
+
+  // Updates the branch input field structure dynamically based on selected course
+  function updateBranchInput() {
+    const courseId = courseSelect.value || '24';
+    const container = document.getElementById('branchInputContainer');
+    if (!container) return;
+
+    const prevVal = branchInput ? branchInput.value : '';
+    container.innerHTML = '';
+
+    if (courseId === '24') {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'select-wrapper';
+
+      const select = document.createElement('select');
+      select.id = 'branchInput';
+      select.required = true;
+
+      const defaultOpt = document.createElement('option');
+      defaultOpt.value = '';
+      defaultOpt.disabled = true;
+      defaultOpt.selected = true;
+      defaultOpt.textContent = 'Select Branch';
+      select.appendChild(defaultOpt);
+
+      if (branchesData) {
+        const sortedBranches = Object.entries(branchesData).sort((a, b) => a[1].localeCompare(b[1]));
+        sortedBranches.forEach(([code, name]) => {
+          const opt = document.createElement('option');
+          opt.value = code;
+          opt.textContent = `${name} [${code}]`;
+          select.appendChild(opt);
+        });
+      }
+
+      wrapper.appendChild(select);
+      container.appendChild(wrapper);
+      branchInput = select;
+    } else {
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.id = 'branchInput';
+      input.placeholder = 'e.g. CS';
+      input.maxLength = 2;
+      input.required = true;
+      input.style.textTransform = 'uppercase';
+
+      input.addEventListener('input', () => {
+        input.value = input.value.toUpperCase();
+      });
+
+      container.appendChild(input);
+      branchInput = input;
+    }
+
+    if (pendingSavedBranch) {
+      branchInput.value = pendingSavedBranch;
+      pendingSavedBranch = '';
+    } else if (prevVal && (courseId !== '24' || (branchesData && branchesData[prevVal]))) {
+      branchInput.value = prevVal;
+    }
+
+    branchInput.addEventListener('change', saveSetupState);
+    branchInput.addEventListener('input', saveSetupState);
+    branchInput.addEventListener('change', updateRangePreview);
+    branchInput.addEventListener('input', updateRangePreview);
+
+    updateRangePreview();
+  }
+
   // Fetches available RGPV course categories from server
   async function loadCourses() {
     try {
@@ -956,6 +1041,7 @@ document.addEventListener('DOMContentLoaded', () => {
         courseSelect.value = pendingSavedCourse;
         pendingSavedCourse = '';
       }
+      updateBranchInput();
     } catch (err) {
       console.error('Failed to load course configurations:', err);
     }
@@ -1299,7 +1385,7 @@ document.addEventListener('DOMContentLoaded', () => {
     staggerDelayInput.disabled = true;
     collegeSelect.disabled = true;
     yearInput.disabled = true;
-    branchInput.disabled = true;
+    if (branchInput) branchInput.disabled = true;
     rangeStartInput.disabled = true;
     rangeEndInput.disabled = true;
     delayInput.disabled = true;
@@ -1321,7 +1407,7 @@ document.addEventListener('DOMContentLoaded', () => {
     staggerDelayInput.disabled = false;
     collegeSelect.disabled = false;
     yearInput.disabled = false;
-    branchInput.disabled = false;
+    if (branchInput) branchInput.disabled = false;
     rangeStartInput.disabled = false;
     rangeEndInput.disabled = false;
     delayInput.disabled = false;
@@ -1687,17 +1773,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Setup input preview listeners for helper form inputs
   function setupRangePreview() {
-    const inputs = [collegeSelect, yearInput, branchInput, rangeStartInput, rangeEndInput];
+    const inputs = [collegeSelect, yearInput, rangeStartInput, rangeEndInput];
     inputs.forEach(input => {
-      input.addEventListener('input', updateRangePreview);
-      input.addEventListener('change', updateRangePreview);
+      if (input) {
+        input.addEventListener('input', updateRangePreview);
+        input.addEventListener('change', updateRangePreview);
+      }
     });
   }
 
   // Synchronizes visual helper values to render the generated enrollment range preview
   function updateRangePreview() {
     const clg = collegeSelect.value || '____';
-    const branchRaw = (branchInput.value || '__').trim();
+    const branchRaw = ((branchInput ? branchInput.value : '') || '__').trim();
     const year = String(yearInput.value || '__').trim();
     const type = '1';
     const startNumRaw = String(rangeStartInput.value || '').trim();
@@ -1891,7 +1979,7 @@ document.addEventListener('DOMContentLoaded', () => {
       useCache: cacheCheckbox.checked,
       college: collegeSelect.value,
       year: yearInput.value,
-      branch: branchInput.value,
+      branch: branchInput ? branchInput.value : '',
       rangeStart: rangeStartInput.value,
       rangeEnd: rangeEndInput.value,
       rollInput: rollInput.value,
@@ -1924,7 +2012,13 @@ document.addEventListener('DOMContentLoaded', () => {
       if (state.useCache !== undefined) cacheCheckbox.checked = state.useCache;
       if (state.college) pendingSavedCollege = state.college;
       if (state.year) yearInput.value = state.year;
-      if (state.branch) branchInput.value = state.branch;
+      if (state.branch) {
+        if (branchInput) {
+          branchInput.value = state.branch;
+        } else {
+          pendingSavedBranch = state.branch;
+        }
+      }
       if (state.rangeStart) rangeStartInput.value = state.rangeStart;
       if (state.rangeEnd) rangeEndInput.value = state.rangeEnd;
       if (state.rollInput) rollInput.value = state.rollInput;
@@ -1957,7 +2051,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const inputsToSave = [
     courseSelect, semesterInput, concurrencyInput, staggerDelayInput,
     delayInput, retriesInput, cacheCheckbox, collegeSelect, yearInput,
-    branchInput, rangeStartInput, rangeEndInput, rollInput,
+    rangeStartInput, rangeEndInput, rollInput,
     includeLateralCheckbox, lateralRangeInput, rememberSetupCheckbox
   ];
 

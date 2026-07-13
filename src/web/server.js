@@ -65,6 +65,16 @@ app.get('/api/colleges', (req, res) => {
   res.json(colleges);
 });
 
+app.get('/api/branches', (req, res) => {
+  try {
+    const branchesPath = path.resolve(__dirname, '../lib/branches.json');
+    const branches = JSON.parse(fs.readFileSync(branchesPath, 'utf8'));
+    res.json(branches);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to load branches' });
+  }
+});
+
 // SSE endpoint to monitor live scraping status
 app.get('/api/scrape/stream', (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');

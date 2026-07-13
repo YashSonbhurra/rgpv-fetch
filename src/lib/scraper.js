@@ -262,7 +262,6 @@ export class RgpvFetch {
           systemAttempts++;
           if (systemAttempts >= this.maxRetries) {
             const result = { error: 'Enrollment No not Found', enrollId: canonicalEnrollId };
-            this._cacheResult(cacheKey, result);
             return result;
           }
           continue;
