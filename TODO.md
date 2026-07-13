@@ -1,10 +1,11 @@
 ## TODOs
-- [UI] Add favicon.ico
-- [UI] Add GitHub and NPM hooks
+- [UI] Add favicon.ico and NPM hook
 - [Library] Bump jimp and switch from uing xlsx to exceljs
 - [Library] Add worksheet and column styling functionality for Excel exports
-- [Bug] Avoid caching not-found results
-- [Bug] Raise semester limit to 10
+- [Bug] Cache retrieval is somewhat broken (could be npx specific)
+- [Bug] Status shows aborted even when successful
+- [Bug] Unable to select multiple branches anymore
+- [Bug] Branch code in exported file names is always ALL
 - [Feature] Add branch dropdown and map branch/subject codes to names
 - [Feature] Find mode: Search by individual name
 - [Feature] Watcher: Check if results are available for a list of courses or semesters
