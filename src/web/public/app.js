@@ -1019,8 +1019,8 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (mapping && typeof mapping === 'object') {
       displayBranches = mapping;
     } else {
-      // Fallback: if course is not explicitly mapped, show all engineering branches
-      displayBranches = branchesData || {};
+      // Fallback: if course is not explicitly mapped, show nothing in the dropdown
+      displayBranches = {};
     }
 
     const sortedBranches = Object.entries(displayBranches).sort((a, b) => a[0].localeCompare(b[0]));
@@ -1461,7 +1461,9 @@ document.addEventListener('DOMContentLoaded', () => {
     delayInput.disabled = true;
     retriesInput.disabled = true;
     cacheCheckbox.disabled = true;
-    rememberSetupCheckbox.disabled = true;
+    if (savePresetBtn) savePresetBtn.disabled = true;
+    if (updatePresetBtn) updatePresetBtn.disabled = true;
+    if (loadPresetBtn) loadPresetBtn.disabled = true;
     includeLateralCheckbox.disabled = true;
     lateralRangeInput.disabled = true;
   }
@@ -1483,7 +1485,9 @@ document.addEventListener('DOMContentLoaded', () => {
     delayInput.disabled = false;
     retriesInput.disabled = false;
     cacheCheckbox.disabled = false;
-    rememberSetupCheckbox.disabled = false;
+    if (savePresetBtn) savePresetBtn.disabled = false;
+    if (updatePresetBtn && activePresetId) updatePresetBtn.disabled = false;
+    if (loadPresetBtn) loadPresetBtn.disabled = false;
     includeLateralCheckbox.disabled = false;
     lateralRangeInput.disabled = false;
   }

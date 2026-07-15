@@ -2481,3 +2481,13 @@ body.dark-theme .preset-item:hover {
   color: #ef4444 !important;
   background: rgba(239, 68, 68, 0.05) !important;
 }
+
+/* Prevent left-edge cutoffs by shifting tooltips to the right */
+.info-tooltip-badge.tooltip-right-shift::after {
+  left: -10px !important;
+  transform: translateX(0) scale(0.9) !important;
+}
+
+.info-tooltip-badge.tooltip-right-shift:hover::after {
+  transform: translateX(0) scale(1) !important;
+}
