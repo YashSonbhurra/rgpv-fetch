@@ -2198,3 +2198,286 @@ body.dark-theme .perf-pill-slider {
   background: var(--accent-primary);
   box-shadow: 0 0 10px rgba(0, 240, 255, 0.45);
 }
+
+/* Preserve Checkbox Style overrides */
+input[type="checkbox"].preserve-check {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  width: 12px !important;
+  height: 12px !important;
+  min-width: 12px !important;
+  max-width: 12px !important;
+  min-height: 12px !important;
+  max-height: 12px !important;
+  border: 1px solid var(--card-border) !important;
+  border-radius: 3px !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  transition: all 0.2s ease !important;
+  outline: none !important;
+  position: relative !important;
+  background: transparent !important;
+}
+input[type="checkbox"].preserve-check:hover {
+  border-color: var(--accent-primary) !important;
+}
+input[type="checkbox"].preserve-check::before {
+  content: '' !important;
+  width: 6px !important;
+  height: 4px !important;
+  border-left: 2px solid transparent !important;
+  border-bottom: 2px solid transparent !important;
+  transform: rotate(-45deg) translate(1px, -1px) !important;
+  transition: border-color 0.15s ease !important;
+}
+input[type="checkbox"].preserve-check:checked {
+  background: #84cc16 !important; /* Green accent */
+  border-color: #84cc16 !important;
+}
+input[type="checkbox"].preserve-check:checked::before {
+  border-color: #ffffff !important; /* Crisp white checkmark */
+}
+
+/* Searchable Combobox Component */
+.combobox-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.combobox-wrapper::after {
+  content: '▼';
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.combobox-wrapper input {
+  padding-right: 3.2rem !important;
+  text-transform: uppercase;
+}
+
+.combobox-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  width: 100%;
+  max-height: 200px;
+  overflow-y: auto;
+  background: var(--tooltip-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  z-index: 1000;
+  box-shadow: var(--tooltip-shadow);
+}
+
+.combobox-option {
+  padding: 8px 12px;
+  font-size: 0.8rem;
+  color: var(--text-main);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.combobox-option:hover,
+.combobox-option.highlighted {
+  background: rgba(37, 99, 235, 0.08) !important;
+  color: var(--accent-primary) !important;
+}
+
+body.dark-theme .combobox-option:hover,
+body.dark-theme .combobox-option.highlighted {
+  background: rgba(0, 240, 255, 0.06) !important;
+  color: var(--accent-secondary) !important;
+}
+
+/* Combobox Clear Button (Red Cross) */
+.combobox-clear-btn {
+  position: absolute !important;
+  right: 28px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  background: none !important;
+  border: none !important;
+  color: #ef4444 !important; /* Red color */
+  font-size: 22px !important;
+  font-weight: bold !important;
+  cursor: pointer !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 24px !important;
+  height: 24px !important;
+  z-index: 5 !important;
+  transition: color 0.15s ease, transform 0.15s ease !important;
+  line-height: 1 !important;
+  outline: none !important;
+}
+
+.combobox-clear-btn:hover {
+  color: #dc2626 !important;
+  transform: translateY(-50%) scale(1.2) !important;
+}
+
+body.dark-theme .combobox-clear-btn {
+  color: #f87171 !important; /* Lighter red for contrast in dark theme */
+}
+
+body.dark-theme .combobox-clear-btn:hover {
+  color: #ef4444 !important;
+}
+
+.combobox-clear-btn.hidden {
+  display: none !important;
+}
+
+/* Custom Presets Buttons (Pill shaped pastel lavender/purple) */
+.preset-btn {
+  background: #e9e3ff !important;
+  color: #6d28d9 !important;
+  border: 1px solid #dcd4ff !important;
+  border-radius: 999px !important; /* Pill shape! */
+  font-weight: 600 !important;
+  font-size: 0.75rem !important;
+  height: 32px !important;
+  padding: 0 1.2rem !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.3rem !important;
+  transition: all 0.2s ease-in-out !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 2px 4px rgba(109, 40, 217, 0.06);
+}
+
+.preset-btn:hover {
+  background: #ded5ff !important;
+  color: #5b21b6 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 4px 8px rgba(109, 40, 217, 0.12);
+  transform: translateY(-0.5px);
+}
+
+body.dark-theme .preset-btn {
+  background: rgba(109, 40, 217, 0.15) !important;
+  color: #c084fc !important;
+  border: 1px solid rgba(109, 40, 217, 0.3) !important;
+  box-shadow: none;
+}
+
+body.dark-theme .preset-btn:hover {
+  background: rgba(109, 40, 217, 0.25) !important;
+  color: #d8b4fe !important;
+}
+
+.preset-btn.hidden {
+  display: none !important;
+}
+
+/* Redesigned Preset List Card Layout */
+.presets-list-card {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.preset-item {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 1rem 1.2rem !important;
+  background: rgba(255, 255, 255, 0.02) !important;
+  border: 1px solid var(--card-border) !important;
+  border-radius: 16px !important;
+  margin-bottom: 0.8rem !important;
+  transition: all 0.2s ease-in-out !important;
+  cursor: pointer;
+}
+
+.preset-item:last-child {
+  margin-bottom: 0 !important;
+}
+
+.preset-item:hover {
+  background: rgba(245, 158, 11, 0.04) !important; /* Soft warm amber highlight */
+  border-color: rgba(245, 158, 11, 0.3) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+body.dark-theme .preset-item:hover {
+  background: rgba(245, 158, 11, 0.06) !important;
+  border-color: rgba(245, 158, 11, 0.3) !important;
+}
+
+.preset-item .preset-name {
+  font-weight: 700 !important;
+  font-size: 0.95rem !important;
+  color: var(--text-main) !important;
+  display: block !important;
+}
+
+.preset-item .preset-summary {
+  font-size: 0.72rem !important;
+  color: var(--text-muted) !important;
+  opacity: 0.9 !important;
+  display: block !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  max-width: 320px !important;
+  margin-top: 4px !important;
+}
+
+/* Action Button Pill style */
+.preset-card-btn {
+  border-radius: 999px !important;
+  border: 1px solid var(--card-border) !important;
+  background: transparent !important;
+  color: var(--text-muted) !important;
+  padding: 0.25rem 0.9rem !important;
+  font-size: 0.72rem !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease-in-out !important;
+  outline: none !important;
+}
+
+.preset-card-btn:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: var(--accent-primary) !important;
+  color: var(--accent-primary) !important;
+}
+
+.preset-card-btn.delete-preset-btn:hover {
+  background: rgba(239, 68, 68, 0.08) !important;
+  border-color: #ef4444 !important;
+  color: #ef4444 !important;
+}
+
+#clearAllPresetsBtn {
+  border: 1px solid var(--card-border) !important;
+  border-radius: 999px !important;
+  background: transparent !important;
+  color: var(--text-muted) !important;
+  padding: 0.3rem 1rem !important;
+  font-size: 0.72rem !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  height: auto !important;
+}
+
+#clearAllPresetsBtn:hover {
+  border-color: #ef4444 !important;
+  color: #ef4444 !important;
+  background: rgba(239, 68, 68, 0.05) !important;
+}

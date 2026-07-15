@@ -1,4 +1,18 @@
 document.addEventListener('DOMContentLoaded', () => {
+  // Extracts RGPV course ID from combobox input text (e.g. "B.Tech (24)" -> "24")
+  function getCourseId() {
+    const val = courseSelect.value || '';
+    const match = val.match(/\((\d+)\)/);
+    return match ? match[1] : val.trim();
+  }
+
+  // Extracts college code from combobox input text (e.g. "LNCT [0176]" or "[0176] LNCT" -> "0176")
+  function getCollegeCode() {
+    const val = collegeSelect.value || '';
+    const match = val.match(/\[([a-zA-Z0-9]+)\]/);
+    return match ? match[1] : val.trim().substring(0, 4);
+  }
+
   const scrapeForm = document.getElementById('scrapeForm');
   const courseSelect = document.getElementById('courseSelect');
   const semesterInput = document.getElementById('semesterInput');
@@ -6,7 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const staggerDelayInput = document.getElementById('staggerDelayInput');
   const collegeSelect = document.getElementById('collegeSelect');
   const yearInput = document.getElementById('yearInput');
-  let branchInput = null;
+  const branchInput = document.getElementById('branchInput');
   let branchesData = null;
   let pendingSavedBranch = '';
   const rangeStartInput = document.getElementById('rangeStartInput');
@@ -23,7 +37,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const delayInput = document.getElementById('delayInput');
   const retriesInput = document.getElementById('retriesInput');
   const cacheCheckbox = document.getElementById('cacheCheckbox');
-  const rememberSetupCheckbox = document.getElementById('rememberSetupCheckbox');
+  const savePresetBtn = document.getElementById('savePresetBtn');
+  const loadPresetBtn = document.getElementById('loadPresetBtn');
+  const presetsModal = document.getElementById('presetsModal');
+  const clearAllPresetsBtn = document.getElementById('clearAllPresetsBtn');
+  const closePresetsBtn = document.getElementById('closePresetsBtn');
+  const presetsListContainer = document.getElementById('presetsListContainer');
+  const updatePresetBtn = document.getElementById('updatePresetBtn');
+  let activePresetId = null; // Tracks currently loaded preset ID
 
   const advTrigger = document.getElementById('advTrigger');
   const advContent = document.getElementById('advContent');
@@ -153,6 +174,9 @@ document.addEventListener('DOMContentLoaded', () => {
     setupExportActions();
     setupSubjectSelect();
     setupInputModeToggle();
+    setupCourseCombobox();
+    setupCollegeCombobox();
+    setupBranchCombobox();
     await loadBranches();
     courseSelect.addEventListener('change', updateBranchInput);
     courseSelect.addEventListener('input', updateBranchInput);
@@ -163,7 +187,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupClearCache();
     setupModal();
     setupCustomizer();
-    loadSetupState();
+    setupPresetsManager();
     await loadCourses();
     await loadColleges();
     setupEventSource();
@@ -953,71 +977,43 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Updates the branch input field structure dynamically based on selected course
+  // Updates the branch combobox dropdown options dynamically based on selected course
   function updateBranchInput() {
-    const courseId = courseSelect.value || '24';
-    const container = document.getElementById('branchInputContainer');
-    if (!container) return;
+    const courseId = getCourseId();
+    const dropdown = document.getElementById('branchDropdown');
+    if (!dropdown) return;
 
-    const prevVal = branchInput ? branchInput.value : '';
-    container.innerHTML = '';
+    dropdown.innerHTML = '';
+    const branchesForCourse = branchesData ? branchesData[courseId] : null;
 
-    if (courseId === '24') {
-      const wrapper = document.createElement('div');
-      wrapper.className = 'select-wrapper';
-
-      const select = document.createElement('select');
-      select.id = 'branchInput';
-      select.required = true;
-
-      const defaultOpt = document.createElement('option');
-      defaultOpt.value = '';
-      defaultOpt.disabled = true;
-      defaultOpt.selected = true;
-      defaultOpt.textContent = 'Select Branch';
-      select.appendChild(defaultOpt);
-
-      if (branchesData) {
-        const sortedBranches = Object.entries(branchesData).sort((a, b) => a[1].localeCompare(b[1]));
-        sortedBranches.forEach(([code, name]) => {
-          const opt = document.createElement('option');
-          opt.value = code;
-          opt.textContent = `${name} [${code}]`;
-          select.appendChild(opt);
-        });
-      }
-
-      wrapper.appendChild(select);
-      container.appendChild(wrapper);
-      branchInput = select;
-    } else {
-      const input = document.createElement('input');
-      input.type = 'text';
-      input.id = 'branchInput';
-      input.placeholder = 'e.g. CS';
-      input.maxLength = 2;
-      input.required = true;
-      input.style.textTransform = 'uppercase';
-
-      input.addEventListener('input', () => {
-        input.value = input.value.toUpperCase();
+    if (branchesForCourse) {
+      const sortedBranches = Object.entries(branchesForCourse).sort((a, b) => a[0].localeCompare(b[0]));
+      sortedBranches.forEach(([code, name]) => {
+        const option = document.createElement('div');
+        option.className = 'combobox-option';
+        option.setAttribute('data-value', code);
+        option.textContent = `${name} [${code}]`;
+        dropdown.appendChild(option);
       });
-
-      container.appendChild(input);
-      branchInput = input;
     }
+
+    // Re-bind mouse events on new options
+    const options = Array.from(dropdown.querySelectorAll('.combobox-option'));
+    options.forEach(opt => {
+      opt.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        const val = opt.getAttribute('data-value');
+        branchInput.value = val;
+        dropdown.classList.add('hidden');
+        branchInput.dispatchEvent(new Event('input'));
+        branchInput.dispatchEvent(new Event('change'));
+      });
+    });
 
     if (pendingSavedBranch) {
       branchInput.value = pendingSavedBranch;
       pendingSavedBranch = '';
-    } else if (prevVal && (courseId !== '24' || (branchesData && branchesData[prevVal]))) {
-      branchInput.value = prevVal;
     }
-
-    branchInput.addEventListener('change', saveSetupState);
-    branchInput.addEventListener('input', saveSetupState);
-    branchInput.addEventListener('change', updateRangePreview);
-    branchInput.addEventListener('input', updateRangePreview);
 
     updateRangePreview();
   }
@@ -1028,19 +1024,25 @@ document.addEventListener('DOMContentLoaded', () => {
       const res = await fetch('/api/courses');
       coursesData = await res.json();
 
-      courseSelect.innerHTML = '';
+      const courseDropdown = document.getElementById('courseDropdown');
+      if (courseDropdown) courseDropdown.innerHTML = '';
+
       Object.entries(coursesData).forEach(([id, info]) => {
-        const option = document.createElement('option');
-        option.value = id;
+        const option = document.createElement('div');
+        option.className = 'combobox-option';
+        option.setAttribute('data-value', id);
         option.textContent = `${info.name} (${id})`;
-        if (id === '24') option.selected = true;
-        courseSelect.appendChild(option);
+        courseDropdown.appendChild(option);
       });
 
-      if (pendingSavedCourse) {
-        courseSelect.value = pendingSavedCourse;
-        pendingSavedCourse = '';
-      }
+      // Initialize course combobox listeners
+      setupCourseCombobox();
+
+      // Default to B.Tech (24)
+      const defaultOpt = Array.from(courseDropdown.querySelectorAll('.combobox-option'))
+        .find(opt => opt.getAttribute('data-value') === '24');
+      courseSelect.value = defaultOpt ? defaultOpt.textContent : 'B.Tech (24)';
+
       updateBranchInput();
     } catch (err) {
       console.error('Failed to load course configurations:', err);
@@ -1053,28 +1055,26 @@ document.addEventListener('DOMContentLoaded', () => {
       const res = await fetch('/api/colleges');
       globalCollegesData = await res.json();
 
-      collegeSelect.innerHTML = '';
-
-      const defaultOpt = document.createElement('option');
-      defaultOpt.value = '';
-      defaultOpt.disabled = true;
-      defaultOpt.textContent = 'Select College';
-      collegeSelect.appendChild(defaultOpt);
+      const collegeDropdown = document.getElementById('collegeDropdown');
+      if (collegeDropdown) collegeDropdown.innerHTML = '';
 
       const sortedColleges = Object.entries(globalCollegesData).sort((a, b) => a[0].localeCompare(b[0]));
 
       sortedColleges.forEach(([code, c]) => {
-        const option = document.createElement('option');
-        option.value = code;
+        const option = document.createElement('div');
+        option.className = 'combobox-option';
+        option.setAttribute('data-value', code);
         option.textContent = `[${code}] ${c.name}${c.city ? ` (${c.city})` : ''}`;
-        if (code === '0176') option.selected = true;
-        collegeSelect.appendChild(option);
+        collegeDropdown.appendChild(option);
       });
 
-      if (pendingSavedCollege) {
-        collegeSelect.value = pendingSavedCollege;
-        pendingSavedCollege = '';
-      }
+      // Initialize college combobox listeners
+      setupCollegeCombobox();
+
+      // Default to LNCT (0176)
+      const defaultOpt = Array.from(collegeDropdown.querySelectorAll('.combobox-option'))
+        .find(opt => opt.getAttribute('data-value') === '0176');
+      collegeSelect.value = defaultOpt ? defaultOpt.textContent : '';
 
       updateRangePreview();
     } catch (err) {
@@ -1193,14 +1193,14 @@ document.addEventListener('DOMContentLoaded', () => {
     let finalRollInput = '';
 
     if (activeInputMode === 'visual') {
-      const clg = collegeSelect.value;
+      const clg = getCollegeCode();
       const branchRaw = branchInput.value.trim();
       const year = String(yearInput.value).trim();
       const startNumRaw = String(rangeStartInput.value).trim();
       const endNumRaw = String(rangeEndInput.value).trim();
 
       if (!clg || !branchRaw || !year || !startNumRaw) {
-        alert('Please fill out all visual helper fields (College, Year, Branch, and Start).');
+        alert('Please fill out all Simple Mode fields (College, Year, Branch, and Start).');
         return;
       }
 
@@ -1232,7 +1232,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const payload = {
-      courseId: courseSelect.value,
+      courseId: getCourseId(),
       semester: parseInt(semesterInput.value, 10),
       rollInput: finalRollInput,
       concurrency: parseInt(concurrencyInput.value, 10),
@@ -1244,7 +1244,7 @@ document.addEventListener('DOMContentLoaded', () => {
       lateralRange: lateralRangeInput.value.trim()
     };
 
-    activeJobCourseId = courseSelect.value;
+    activeJobCourseId = getCourseId();
     activeJobSemester = semesterInput.value;
 
     try {
@@ -1323,6 +1323,41 @@ document.addEventListener('DOMContentLoaded', () => {
       tallyPassedCount.textContent = '0';
       tallyGraceCount.textContent = '0';
       tallyFailedCount.textContent = '0';
+
+      // Clear form inputs respecting Preserve checkboxes
+      semesterInput.value = '';
+
+      const lockCourse = document.getElementById('lockCourseCheckbox')?.checked;
+      if (!lockCourse) {
+        courseSelect.value = '';
+      }
+
+      const lockBranch = document.getElementById('lockBranchCheckbox')?.checked;
+      if (!lockBranch) {
+        branchInput.value = '';
+      }
+
+      const lockCollege = document.getElementById('lockCollegeCheckbox')?.checked;
+      if (!lockCollege) {
+        collegeSelect.value = '';
+      }
+
+      rangeStartInput.value = '1';
+      rangeEndInput.value = '';
+      yearInput.value = '';
+
+      // Dispatch events so range previews, comboboxes, and lateral entry toggles update instantly!
+      semesterInput.dispatchEvent(new Event('input'));
+      semesterInput.dispatchEvent(new Event('change'));
+      branchInput.dispatchEvent(new Event('input'));
+      collegeSelect.dispatchEvent(new Event('input'));
+      courseSelect.dispatchEvent(new Event('input'));
+
+      // Reset active loaded preset tracking
+      activePresetId = null;
+      if (updatePresetBtn) {
+        updatePresetBtn.classList.add('hidden');
+      }
     } catch (err) {
       alert(`Failed to reset state: ${err.message}`);
     }
@@ -1784,8 +1819,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Synchronizes visual helper values to render the generated enrollment range preview
   function updateRangePreview() {
-    const clg = collegeSelect.value || '____';
-    const branchRaw = ((branchInput ? branchInput.value : '') || '__').trim();
+    const clgCode = getCollegeCode();
+    const clg = clgCode ? clgCode : '____';
+    const branchRaw = (branchInput.value || '__').trim();
     const year = String(yearInput.value || '__').trim();
     const type = '1';
     const startNumRaw = String(rangeStartInput.value || '').trim();
@@ -1961,112 +1997,599 @@ document.addEventListener('DOMContentLoaded', () => {
     calculateAnalytics();
   });
 
-  // Saves setup forms values into localStorage
-  function saveSetupState() {
-    if (!rememberSetupCheckbox.checked) {
-      localStorage.removeItem(SETUP_STORAGE_KEY);
-      localStorage.setItem('remember_setup_enabled', 'false');
+  // Generic helper to show/hide and handle the red cross button inside combobox wrappers
+  function enableComboboxClearButton(inputEl, dropdownEl, clearBtnEl) {
+    const updateClearButton = () => {
+      const isDropdownVisible = !dropdownEl.classList.contains('hidden');
+      const hasValue = inputEl.value.trim().length > 0;
+      if (isDropdownVisible && hasValue) {
+        clearBtnEl.classList.remove('hidden');
+      } else {
+        clearBtnEl.classList.add('hidden');
+      }
+    };
+
+    // Listen on user text input, focus or clicks to update clear button visibility
+    inputEl.addEventListener('input', updateClearButton);
+    inputEl.addEventListener('focus', updateClearButton);
+    inputEl.addEventListener('click', updateClearButton);
+
+    // Hide clear button when clicking outside
+    document.addEventListener('mousedown', (e) => {
+      if (!inputEl.contains(e.target) && !dropdownEl.contains(e.target) && !clearBtnEl.contains(e.target)) {
+        clearBtnEl.classList.add('hidden');
+      }
+    });
+
+    // Handle quick clear event
+    clearBtnEl.addEventListener('mousedown', (e) => {
+      e.preventDefault(); // Prevent input from losing focus
+      inputEl.value = '';
+      inputEl.dispatchEvent(new Event('input'));
+      inputEl.dispatchEvent(new Event('change'));
+      clearBtnEl.classList.add('hidden');
+      inputEl.focus();
+    });
+  }
+
+  // Generic helper to enable keyboard ArrowUp, ArrowDown and Enter navigation inside combobox dropdowns
+  function enableComboboxKeyboardNavigation(inputEl, dropdownEl) {
+    let activeIndex = -1;
+
+    const clearHighlight = () => {
+      const options = Array.from(dropdownEl.querySelectorAll('.combobox-option'));
+      options.forEach(opt => opt.classList.remove('highlighted'));
+    };
+
+    inputEl.addEventListener('keydown', (e) => {
+      const visibleOpts = Array.from(dropdownEl.querySelectorAll('.combobox-option'))
+        .filter(opt => !opt.classList.contains('hidden'));
+
+      if (visibleOpts.length === 0) return;
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        clearHighlight();
+        activeIndex = (activeIndex + 1) % visibleOpts.length;
+        const opt = visibleOpts[activeIndex];
+        opt.classList.add('highlighted');
+        opt.scrollIntoView({ block: 'nearest' });
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        clearHighlight();
+        activeIndex = (activeIndex - 1 + visibleOpts.length) % visibleOpts.length;
+        const opt = visibleOpts[activeIndex];
+        opt.classList.add('highlighted');
+        opt.scrollIntoView({ block: 'nearest' });
+      } else if (e.key === 'Enter') {
+        if (activeIndex >= 0 && activeIndex < visibleOpts.length) {
+          e.preventDefault();
+          const opt = visibleOpts[activeIndex];
+          
+          const mousedownEvent = new MouseEvent('mousedown', {
+            bubbles: true,
+            cancelable: true,
+            view: window
+          });
+          opt.dispatchEvent(mousedownEvent);
+          activeIndex = -1;
+        }
+      } else if (e.key === 'Escape') {
+        dropdownEl.classList.add('hidden');
+        activeIndex = -1;
+        clearHighlight();
+      }
+    });
+
+    inputEl.addEventListener('input', () => {
+      activeIndex = -1;
+      clearHighlight();
+    });
+
+    inputEl.addEventListener('focus', () => {
+      activeIndex = -1;
+      clearHighlight();
+    });
+    inputEl.addEventListener('click', () => {
+      activeIndex = -1;
+      clearHighlight();
+    });
+  }
+
+  // Searchable Combobox handler for RGPV Course Select
+  function setupCourseCombobox() {
+    const courseDropdown = document.getElementById('courseDropdown');
+    if (!courseSelect || !courseDropdown) return;
+
+    const showDropdown = () => {
+      courseDropdown.classList.remove('hidden');
+      filterOptions();
+    };
+
+    const filterOptions = () => {
+      const val = courseSelect.value.toLowerCase().replace(/[\.\s]+/g, '');
+      const options = Array.from(courseDropdown.querySelectorAll('.combobox-option'));
+      options.forEach(opt => {
+        const text = opt.textContent.toLowerCase().replace(/[\.\s]+/g, '');
+        const value = opt.getAttribute('data-value').toLowerCase().replace(/[\.\s]+/g, '');
+        if (text.includes(val) || value.includes(val)) {
+          opt.classList.remove('hidden');
+        } else {
+          opt.classList.add('hidden');
+        }
+      });
+    };
+
+    if (!courseSelect.dataset.listenerInitialized) {
+      courseSelect.dataset.listenerInitialized = 'true';
+
+      courseSelect.addEventListener('focus', showDropdown);
+      courseSelect.addEventListener('click', showDropdown);
+
+      document.addEventListener('mousedown', (e) => {
+        if (!courseSelect.contains(e.target) && !courseDropdown.contains(e.target)) {
+          courseDropdown.classList.add('hidden');
+        }
+      });
+
+      courseSelect.addEventListener('input', () => {
+        filterOptions();
+      });
+
+      enableComboboxKeyboardNavigation(courseSelect, courseDropdown);
+
+      const courseClearBtn = document.getElementById('courseClearBtn');
+      if (courseClearBtn) {
+        enableComboboxClearButton(courseSelect, courseDropdown, courseClearBtn);
+      }
+    }
+
+    const options = Array.from(courseDropdown.querySelectorAll('.combobox-option'));
+    options.forEach(opt => {
+      opt.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        
+        const fullText = opt.textContent;
+        courseSelect.value = fullText;
+        courseDropdown.classList.add('hidden');
+        
+        courseSelect.dispatchEvent(new Event('input'));
+        courseSelect.dispatchEvent(new Event('change'));
+      });
+    });
+  }
+
+  // Searchable Combobox handler for College Select
+  function setupCollegeCombobox() {
+    const collegeDropdown = document.getElementById('collegeDropdown');
+    if (!collegeSelect || !collegeDropdown) return;
+
+    const showDropdown = () => {
+      collegeDropdown.classList.remove('hidden');
+      filterOptions();
+    };
+
+    const filterOptions = () => {
+      const val = collegeSelect.value.toLowerCase();
+      const options = Array.from(collegeDropdown.querySelectorAll('.combobox-option'));
+      options.forEach(opt => {
+        const text = opt.textContent.toLowerCase();
+        const value = opt.getAttribute('data-value').toLowerCase();
+        if (text.includes(val) || value.includes(val)) {
+          opt.classList.remove('hidden');
+        } else {
+          opt.classList.add('hidden');
+        }
+      });
+    };
+
+    if (!collegeSelect.dataset.listenerInitialized) {
+      collegeSelect.dataset.listenerInitialized = 'true';
+
+      collegeSelect.addEventListener('focus', showDropdown);
+      collegeSelect.addEventListener('click', showDropdown);
+
+      document.addEventListener('mousedown', (e) => {
+        if (!collegeSelect.contains(e.target) && !collegeDropdown.contains(e.target)) {
+          collegeDropdown.classList.add('hidden');
+        }
+      });
+
+      collegeSelect.addEventListener('input', () => {
+        filterOptions();
+      });
+
+      enableComboboxKeyboardNavigation(collegeSelect, collegeDropdown);
+
+      const collegeClearBtn = document.getElementById('collegeClearBtn');
+      if (collegeClearBtn) {
+        enableComboboxClearButton(collegeSelect, collegeDropdown, collegeClearBtn);
+      }
+    }
+
+    const options = Array.from(collegeDropdown.querySelectorAll('.combobox-option'));
+    options.forEach(opt => {
+      opt.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        
+        const fullText = opt.textContent;
+        collegeSelect.value = fullText;
+        collegeDropdown.classList.add('hidden');
+        
+        collegeSelect.dispatchEvent(new Event('input'));
+        collegeSelect.dispatchEvent(new Event('change'));
+      });
+    });
+  }
+
+  // Searchable Combobox handler for Branch Select
+  function setupBranchCombobox() {
+    const branchDropdown = document.getElementById('branchDropdown');
+    if (!branchInput || !branchDropdown) return;
+
+    const showDropdown = () => {
+      branchDropdown.classList.remove('hidden');
+      filterOptions();
+    };
+
+    const filterOptions = () => {
+      const val = branchInput.value.toLowerCase();
+      const options = Array.from(branchDropdown.querySelectorAll('.combobox-option'));
+      options.forEach(opt => {
+        const text = opt.textContent.toLowerCase();
+        const value = opt.getAttribute('data-value').toLowerCase();
+        if (text.includes(val) || value.includes(val)) {
+          opt.classList.remove('hidden');
+        } else {
+          opt.classList.add('hidden');
+        }
+      });
+    };
+
+    if (!branchInput.dataset.listenerInitialized) {
+      branchInput.dataset.listenerInitialized = 'true';
+
+      branchInput.addEventListener('focus', showDropdown);
+      branchInput.addEventListener('click', showDropdown);
+
+      document.addEventListener('mousedown', (e) => {
+        if (!branchInput.contains(e.target) && !branchDropdown.contains(e.target)) {
+          branchDropdown.classList.add('hidden');
+        }
+      });
+
+      branchInput.addEventListener('input', () => {
+        branchInput.value = branchInput.value.toUpperCase();
+        filterOptions();
+      });
+
+      enableComboboxKeyboardNavigation(branchInput, branchDropdown);
+
+      const branchClearBtn = document.getElementById('branchClearBtn');
+      if (branchClearBtn) {
+        enableComboboxClearButton(branchInput, branchDropdown, branchClearBtn);
+      }
+    }
+
+    const options = Array.from(branchDropdown.querySelectorAll('.combobox-option'));
+    options.forEach(opt => {
+      opt.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        
+        const val = opt.getAttribute('data-value');
+        branchInput.value = val;
+        branchDropdown.classList.add('hidden');
+        
+        branchInput.dispatchEvent(new Event('input'));
+        branchInput.dispatchEvent(new Event('change'));
+      });
+    });
+  }
+
+  // Setup Presets Manager buttons and modal overlay
+  function setupPresetsManager() {
+    if (!savePresetBtn || !loadPresetBtn || !presetsModal || !clearAllPresetsBtn || !closePresetsBtn || !presetsListContainer) return;
+
+    // Show presets modal
+    loadPresetBtn.addEventListener('click', () => {
+      presetsModal.classList.remove('hidden');
+      renderPresetsList();
+    });
+
+    // Close presets modal
+    closePresetsBtn.addEventListener('click', () => {
+      presetsModal.classList.add('hidden');
+    });
+
+    presetsModal.addEventListener('mousedown', (e) => {
+      if (e.target === presetsModal) {
+        presetsModal.classList.add('hidden');
+      }
+    });
+
+    // Clear all presets
+    clearAllPresetsBtn.addEventListener('click', () => {
+      if (confirm('Are you sure you want to delete all saved presets? This cannot be undone.')) {
+        localStorage.removeItem('rgpv_presets');
+        activePresetId = null;
+        if (updatePresetBtn) {
+          updatePresetBtn.classList.add('hidden');
+        }
+        renderPresetsList();
+      }
+    });
+
+    // Save Preset
+    savePresetBtn.addEventListener('click', () => {
+      const nickname = prompt('Enter a nickname for this configuration preset:');
+      if (nickname === null) return; // User cancelled
+      if (!nickname.trim()) {
+        alert('Preset name cannot be empty.');
+        return;
+      }
+
+      const presets = JSON.parse(localStorage.getItem('rgpv_presets') || '[]');
+      
+      // Check if nickname already exists
+      const nameExists = presets.some(p => p.name.toLowerCase() === nickname.trim().toLowerCase());
+      if (nameExists) {
+        if (!confirm(`A preset named "${nickname.trim()}" already exists. Do you want to overwrite it?`)) {
+          return;
+        }
+        // Remove the existing one
+        const index = presets.findIndex(p => p.name.toLowerCase() === nickname.trim().toLowerCase());
+        if (index > -1) presets.splice(index, 1);
+      }
+
+      // Build summary text
+      const parts = [];
+      const courseText = courseSelect.value ? courseSelect.value.split(' (')[0] : '';
+      if (courseText) parts.push(courseText);
+      
+      const collegeCode = getCollegeCode();
+      if (collegeCode) parts.push('Clg ' + collegeCode);
+      
+      const branchText = branchInput.value.trim();
+      if (branchText) parts.push(branchText);
+      
+      const semText = semesterInput.value.trim();
+      if (semText) parts.push('Sem ' + semText);
+      
+      const summaryText = parts.join(' | ') || 'Custom Config';
+
+      const newPreset = {
+        id: 'preset_' + Date.now(),
+        name: nickname.trim(),
+        timestamp: Date.now(),
+        summary: summaryText,
+        config: {
+          courseSelectText: courseSelect.value,
+          semester: semesterInput.value,
+          concurrency: concurrencyInput.value,
+          staggerDelay: staggerDelayInput.value,
+          delay: delayInput.value,
+          retries: retriesInput.value,
+          useCache: cacheCheckbox.checked,
+          collegeSelectText: collegeSelect.value,
+          year: yearInput.value,
+          branch: branchInput.value,
+          rangeStart: rangeStartInput.value,
+          rangeEnd: rangeEndInput.value,
+          rollInput: rollInput.value,
+          includeLateral: includeLateralCheckbox.checked,
+          lateralRange: lateralRangeInput.value,
+          inputMode: activeInputMode
+        }
+      };
+
+      presets.unshift(newPreset); // Prepend to show newest first
+      localStorage.setItem('rgpv_presets', JSON.stringify(presets));
+      alert(`Preset "${newPreset.name}" saved successfully!`);
+    });
+
+    // Update Preset
+    updatePresetBtn.addEventListener('click', () => {
+      if (!activePresetId) return;
+
+      const presets = JSON.parse(localStorage.getItem('rgpv_presets') || '[]');
+      const index = presets.findIndex(p => p.id === activePresetId);
+      if (index === -1) {
+        alert('Active preset not found in storage. Please save a new preset.');
+        return;
+      }
+
+      const preset = presets[index];
+
+      // Build summary text
+      const parts = [];
+      const courseText = courseSelect.value ? courseSelect.value.split(' (')[0] : '';
+      if (courseText) parts.push(courseText);
+      
+      const collegeCode = getCollegeCode();
+      if (collegeCode) parts.push('Clg ' + collegeCode);
+      
+      const branchText = branchInput.value.trim();
+      if (branchText) parts.push(branchText);
+      
+      const semText = semesterInput.value.trim();
+      if (semText) parts.push('Sem ' + semText);
+      
+      const summaryText = parts.join(' | ') || 'Custom Config';
+
+      preset.timestamp = Date.now();
+      preset.summary = summaryText;
+      preset.config = {
+        courseSelectText: courseSelect.value,
+        semester: semesterInput.value,
+        concurrency: concurrencyInput.value,
+        staggerDelay: staggerDelayInput.value,
+        delay: delayInput.value,
+        retries: retriesInput.value,
+        useCache: cacheCheckbox.checked,
+        collegeSelectText: collegeSelect.value,
+        year: yearInput.value,
+        branch: branchInput.value,
+        rangeStart: rangeStartInput.value,
+        rangeEnd: rangeEndInput.value,
+        rollInput: rollInput.value,
+        includeLateral: includeLateralCheckbox.checked,
+        lateralRange: lateralRangeInput.value,
+        inputMode: activeInputMode
+      };
+
+      // Move updated preset to the top of the list
+      presets.splice(index, 1);
+      presets.unshift(preset);
+
+      localStorage.setItem('rgpv_presets', JSON.stringify(presets));
+      alert(`Preset "${preset.name}" updated successfully!`);
+    });
+  }
+
+  // Render the list of presets inside the modal
+  function renderPresetsList() {
+    presetsListContainer.innerHTML = '';
+    const presets = JSON.parse(localStorage.getItem('rgpv_presets') || '[]');
+
+    if (presets.length === 0) {
+      presetsListContainer.innerHTML = `
+        <div class="text-center py-4 txt-muted" style="font-size: 0.8rem;">
+          No saved presets found. Click "Save Preset" to create one.
+        </div>
+      `;
       return;
     }
 
-    const state = {
-      courseId: courseSelect.value,
-      semester: semesterInput.value,
-      concurrency: concurrencyInput.value,
-      staggerDelay: staggerDelayInput.value,
-      delay: delayInput.value,
-      retries: retriesInput.value,
-      useCache: cacheCheckbox.checked,
-      college: collegeSelect.value,
-      year: yearInput.value,
-      branch: branchInput ? branchInput.value : '',
-      rangeStart: rangeStartInput.value,
-      rangeEnd: rangeEndInput.value,
-      rollInput: rollInput.value,
-      includeLateral: includeLateralCheckbox.checked,
-      lateralRange: lateralRangeInput.value,
-      inputMode: activeInputMode
-    };
+    presets.forEach(preset => {
+      const row = document.createElement('div');
+      row.className = 'preset-item';
+      
+      const date = new Date(preset.timestamp);
+      const timeStr = date.toLocaleString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
 
-    localStorage.setItem(SETUP_STORAGE_KEY, JSON.stringify(state));
-    localStorage.setItem('remember_setup_enabled', 'true');
-  }
+      row.innerHTML = `
+        <div class="preset-info" style="display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0;">
+          <span class="preset-name">${escapeHTML(preset.name)}</span>
+          <span class="preset-summary" title="${preset.summary}">${timeStr} &bull; ${escapeHTML(preset.summary)}</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-left: 0.5rem; flex-shrink: 0;">
+          <button class="preset-card-btn edit-preset-btn" title="Rename Preset">Edit</button>
+          <button class="preset-card-btn delete-preset-btn" style="background: rgba(239, 68, 68, 0.08) !important; border-color: rgba(239, 68, 68, 0.2) !important; color: #ef4444 !important;" title="Delete Preset">Delete</button>
+        </div>
+      `;
 
-  // Restores setup forms values from localStorage
-  function loadSetupState() {
-    const enabled = localStorage.getItem('remember_setup_enabled') === 'true';
-    rememberSetupCheckbox.checked = enabled;
-    if (!enabled) return;
+      // Load Preset on click
+      row.addEventListener('click', (e) => {
+        // If clicked on buttons, don't load preset!
+        if (e.target.closest('button')) return;
 
-    try {
-      const raw = localStorage.getItem(SETUP_STORAGE_KEY);
-      if (!raw) return;
-      const state = JSON.parse(raw);
-
-      if (state.courseId) pendingSavedCourse = state.courseId;
-      if (state.semester) semesterInput.value = state.semester;
-      if (state.concurrency) concurrencyInput.value = state.concurrency;
-      if (state.staggerDelay) staggerDelayInput.value = state.staggerDelay;
-      if (state.delay) delayInput.value = state.delay;
-      if (state.retries) retriesInput.value = state.retries;
-      if (state.useCache !== undefined) cacheCheckbox.checked = state.useCache;
-      if (state.college) pendingSavedCollege = state.college;
-      if (state.year) yearInput.value = state.year;
-      if (state.branch) {
-        if (branchInput) {
-          branchInput.value = state.branch;
-        } else {
-          pendingSavedBranch = state.branch;
+        loadPresetValues(preset.config);
+        activePresetId = preset.id;
+        if (updatePresetBtn) {
+          updatePresetBtn.classList.remove('hidden');
         }
-      }
-      if (state.rangeStart) rangeStartInput.value = state.rangeStart;
-      if (state.rangeEnd) rangeEndInput.value = state.rangeEnd;
-      if (state.rollInput) rollInput.value = state.rollInput;
-      if (state.includeLateral !== undefined) includeLateralCheckbox.checked = state.includeLateral;
-      if (state.lateralRange) lateralRangeInput.value = state.lateralRange;
+        presetsModal.classList.add('hidden');
+      });
 
-      if (state.inputMode) {
-        activeInputMode = state.inputMode;
-        inputModeBtns.forEach(b => {
-          b.classList.toggle('active', b.getAttribute('data-mode') === activeInputMode);
-        });
-        if (activeInputMode === 'visual') {
-          helperInputContainer.classList.remove('hidden');
-          manualInputContainer.classList.add('hidden');
-        } else {
-          helperInputContainer.classList.add('hidden');
-          manualInputContainer.classList.remove('hidden');
+      // Edit Preset
+      const editBtn = row.querySelector('.edit-preset-btn');
+      editBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const newName = prompt('Enter a new nickname for this preset:', preset.name);
+        if (newName === null) return;
+        if (!newName.trim()) {
+          alert('Preset name cannot be empty.');
+          return;
         }
-      }
 
-      semesterInput.dispatchEvent(new Event('change'));
-      includeLateralCheckbox.dispatchEvent(new Event('change'));
-      updateRangePreview();
+        const allPresets = JSON.parse(localStorage.getItem('rgpv_presets') || '[]');
+        const target = allPresets.find(p => p.id === preset.id);
+        if (target) {
+          target.name = newName.trim();
+          localStorage.setItem('rgpv_presets', JSON.stringify(allPresets));
+          renderPresetsList();
+        }
+      });
 
-    } catch (err) {
-      console.error('Failed to load saved setup state:', err);
-    }
-  }
+      // Delete Preset
+      const deleteBtn = row.querySelector('.delete-preset-btn');
+      deleteBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (confirm(`Are you sure you want to delete preset "${preset.name}"?`)) {
+          const allPresets = JSON.parse(localStorage.getItem('rgpv_presets') || '[]');
+          const filtered = allPresets.filter(p => p.id !== preset.id);
+          localStorage.setItem('rgpv_presets', JSON.stringify(filtered));
+          if (activePresetId === preset.id) {
+            activePresetId = null;
+            if (updatePresetBtn) updatePresetBtn.classList.add('hidden');
+          }
+          renderPresetsList();
+        }
+      });
 
-  const inputsToSave = [
-    courseSelect, semesterInput, concurrencyInput, staggerDelayInput,
-    delayInput, retriesInput, cacheCheckbox, collegeSelect, yearInput,
-    rangeStartInput, rangeEndInput, rollInput,
-    includeLateralCheckbox, lateralRangeInput, rememberSetupCheckbox
-  ];
-
-  inputsToSave.forEach(input => {
-    if (input) {
-      input.addEventListener('change', saveSetupState);
-      input.addEventListener('input', saveSetupState);
-    }
-  });
-
-  inputModeBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      setTimeout(saveSetupState, 0);
+      presetsListContainer.appendChild(row);
     });
-  });
+  }
+
+  // Helper to load config object values back into DOM elements
+  function loadPresetValues(config) {
+    if (!config) return;
+
+    if (config.courseSelectText !== undefined) courseSelect.value = config.courseSelectText;
+    if (config.semester !== undefined) semesterInput.value = config.semester;
+    if (config.concurrency !== undefined) concurrencyInput.value = config.concurrency;
+    if (config.staggerDelay !== undefined) staggerDelayInput.value = config.staggerDelay;
+    if (config.delay !== undefined) delayInput.value = config.delay;
+    if (config.retries !== undefined) retriesInput.value = config.retries;
+    if (config.useCache !== undefined) cacheCheckbox.checked = config.useCache;
+    if (config.collegeSelectText !== undefined) collegeSelect.value = config.collegeSelectText;
+    if (config.year !== undefined) yearInput.value = config.year;
+    if (config.branch !== undefined) branchInput.value = config.branch;
+    if (config.rangeStart !== undefined) rangeStartInput.value = config.rangeStart;
+    if (config.rangeEnd !== undefined) rangeEndInput.value = config.rangeEnd;
+    if (config.rollInput !== undefined) rollInput.value = config.rollInput;
+    if (config.includeLateral !== undefined) includeLateralCheckbox.checked = config.includeLateral;
+    if (config.lateralRange !== undefined) lateralRangeInput.value = config.lateralRange;
+
+    if (config.inputMode !== undefined) {
+      activeInputMode = config.inputMode;
+      inputModeBtns.forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-mode') === activeInputMode);
+      });
+      if (activeInputMode === 'visual') {
+        helperInputContainer.classList.remove('hidden');
+        manualInputContainer.classList.add('hidden');
+      } else {
+        helperInputContainer.classList.add('hidden');
+        manualInputContainer.classList.remove('hidden');
+      }
+    }
+
+    // Trigger change/input events so range previews, comboboxes, and lateral entry toggles update instantly!
+    semesterInput.dispatchEvent(new Event('input'));
+    semesterInput.dispatchEvent(new Event('change'));
+    includeLateralCheckbox.dispatchEvent(new Event('change'));
+    branchInput.dispatchEvent(new Event('input'));
+    collegeSelect.dispatchEvent(new Event('input'));
+    courseSelect.dispatchEvent(new Event('input'));
+  }
+
+  // Helper to escape HTML characters
+  function escapeHTML(str) {
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
 
   // Formats duration in seconds to standard 'm s' or 's' layout
   function formatDuration(seconds) {
