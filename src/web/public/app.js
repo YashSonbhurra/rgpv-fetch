@@ -2623,48 +2623,122 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  let perfMonitorInterval = null;
+  let isMonitoringPerformance = false;
+
   // Monitors browser rendering frames to detect sluggish devices and automatically apply Eco mode
   function monitorPerformance() {
+    // Clear any existing monitoring interval
+    if (perfMonitorInterval) {
+      clearInterval(perfMonitorInterval);
+      perfMonitorInterval = null;
+    }
+
     const savedProfile = localStorage.getItem('rgpv_perf_profile') || 'auto';
     if (savedProfile !== 'auto') return;
 
-    if (localStorage.getItem('rgpv_perf_auto_downgraded') === 'true') {
-      document.body.classList.add('performance-mode');
+    // Reset the auto-downgraded flag on page load to allow a fresh evaluation of Cinematic mode
+    localStorage.removeItem('rgpv_perf_auto_downgraded');
+    document.body.classList.remove('performance-mode');
+
+    // Run first check after a 5-second delay to allow startup/page-load jank to settle
+    setTimeout(() => {
+      runSinglePerformanceCheck();
+    }, 5000);
+
+    // Schedule periodic checks every 15 seconds to monitor performance changes over time
+    perfMonitorInterval = setInterval(() => {
+      runSinglePerformanceCheck();
+    }, 15000);
+  }
+
+  // Runs a single performance check measuring frame rate over 60 frames (~1 second)
+  function runSinglePerformanceCheck() {
+    const savedProfile = localStorage.getItem('rgpv_perf_profile') || 'auto';
+    if (savedProfile !== 'auto') {
+      if (perfMonitorInterval) {
+        clearInterval(perfMonitorInterval);
+        perfMonitorInterval = null;
+      }
       return;
     }
 
+    // Skip if already auto-downgraded
+    if (localStorage.getItem('rgpv_perf_auto_downgraded') === 'true') {
+      if (perfMonitorInterval) {
+        clearInterval(perfMonitorInterval);
+        perfMonitorInterval = null;
+      }
+      return;
+    }
+
+    // Skip if miner is currently scraping (scraping takes heavy CPU/network load, which creates temporary lag)
+    const container = document.querySelector('main.container');
+    const isCurrentlyScraping = container && container.classList.contains('mining-active');
+    if (isCurrentlyScraping) {
+      console.log('[Performance Monitor] Scraping job is active. Skipping performance check.');
+      return;
+    }
+
+    if (isMonitoringPerformance) return;
+    isMonitoringPerformance = true;
+
     let frameCount = 0;
+    let slowFrames = 0;
     let totalFrameTime = 0;
     let lastTime = performance.now();
-    const maxFrames = 120; // monitor for ~2 seconds
+    const maxFrames = 60; // monitor for 60 frames (~1s)
 
     function measureFrame() {
-      // If user switched away from auto in the middle of monitoring, abort
+      // If user switched away from auto mid-check, abort
       const currentProfile = localStorage.getItem('rgpv_perf_profile') || 'auto';
-      if (currentProfile !== 'auto') return;
+      if (currentProfile !== 'auto') {
+        isMonitoringPerformance = false;
+        return;
+      }
 
       const now = performance.now();
       const delta = now - lastTime;
       lastTime = now;
 
-      // Skip the first 10 frames to let startup initialization settle down
-      if (frameCount > 10) {
+      // Ignore outlier spikes caused by tab switching or browser suspension
+      if (delta > 80) {
+        return; // wait for next normal frame
+      }
+
+      // Skip first 5 frames to ignore transition anomalies
+      if (frameCount > 5) {
         totalFrameTime += delta;
+        // Count as a slow frame if it takes > 18.0ms (below 55 FPS)
+        if (delta > 18.0) {
+          slowFrames++;
+        }
       }
       frameCount++;
 
       if (frameCount < maxFrames) {
         requestAnimationFrame(measureFrame);
       } else {
-        const avgFrameTime = totalFrameTime / (maxFrames - 11);
+        const measuredFramesCount = maxFrames - 6;
+        const avgFrameTime = totalFrameTime / measuredFramesCount;
+        const slowFrameRatio = slowFrames / measuredFramesCount;
 
-        // If average frame duration is greater than 14ms (dropping below 50-55 FPS consistently), downgrade to Eco mode
-        if (avgFrameTime > 14) {
-          console.warn(`[Performance Monitor] Low performance detected (${(1000 / avgFrameTime).toFixed(1)} FPS). Auto-enabling Eco Mode.`);
+        console.log(`[Performance Monitor] Checked: avg ${avgFrameTime.toFixed(2)}ms (${(1000 / avgFrameTime).toFixed(1)} FPS). Slow frames: ${slowFrames}/${measuredFramesCount} (${(slowFrameRatio * 100).toFixed(0)}%)`);
+
+        // Downgrade only if average frame time is > 17.0ms AND more than 35% of frames are slow (indicating genuine struggle)
+        if (avgFrameTime > 17.0 && slowFrameRatio > 0.35) {
+          console.warn(`[Performance Monitor] Genuine system struggle detected (${(1000 / avgFrameTime).toFixed(1)} FPS). Auto-enabling Eco Mode.`);
           localStorage.setItem('rgpv_perf_auto_downgraded', 'true');
           applyPerformanceProfile('auto');
           showPerformanceToast();
+
+          // Stop future checks once downgraded
+          if (perfMonitorInterval) {
+            clearInterval(perfMonitorInterval);
+            perfMonitorInterval = null;
+          }
         }
+        isMonitoringPerformance = false;
       }
     }
 
@@ -2677,13 +2751,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const toast = document.createElement('div');
     toast.id = 'perfToastContainer';
+    
+    // Use dynamic var variables matching the current active theme color scheme
     toast.style.cssText = `
       position: fixed;
       bottom: 24px;
       right: 24px;
-      background: rgba(12, 17, 34, 0.95);
-      border: 1px solid var(--accent-primary);
-      box-shadow: 0 0 15px rgba(0, 240, 255, 0.25);
+      background: var(--tooltip-bg);
+      border: 1px solid var(--tooltip-border);
+      box-shadow: var(--tooltip-shadow);
       border-radius: 8px;
       padding: 12px 18px;
       color: var(--text-main);
@@ -2698,15 +2774,23 @@ document.addEventListener('DOMContentLoaded', () => {
       transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     `;
 
+    const isDark = document.body.classList.contains('dark-theme');
+    const dismissTextColor = isDark ? '#050811' : '#ffffff';
+
     toast.innerHTML = `
       <span style="font-size: 1.2rem;">🔋</span>
       <div style="flex-grow: 1;">
         <div style="font-weight: 700; color: var(--accent-primary);">Eco Mode Activated</div>
-        <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; max-width: 250px; line-height: 1.3;">Performance settings optimized to maintain 60 FPS on your system.</div>
+        <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; max-width: 250px; line-height: 1.3;">Performance settings optimized to maintain maximum FPS on your system.</div>
       </div>
-      <button id="perfToastDismiss" style="background: rgba(0, 240, 255, 0.1); border: 1px solid rgba(0, 240, 255, 0.2); color: var(--accent-primary); cursor: pointer; font-size: 0.72rem; font-weight: 700; padding: 4px 8px; border-radius: 4px; transition: all 0.2s;">
-        Got it
-      </button>
+      <div style="display: flex; gap: 8px; flex-shrink: 0; align-items: center;">
+        <button id="perfToastRevert" style="background: transparent; border: 1px solid var(--accent-secondary); color: var(--accent-secondary); cursor: pointer; font-size: 0.72rem; font-weight: 700; padding: 5px 9px; border-radius: 4px; transition: all 0.2s;">
+          Revert
+        </button>
+        <button id="perfToastDismiss" style="background: var(--accent-primary); border: 1px solid var(--accent-primary); color: ${dismissTextColor}; cursor: pointer; font-size: 0.72rem; font-weight: 700; padding: 5px 9px; border-radius: 4px; transition: all 0.2s;">
+          Got it
+        </button>
+      </div>
     `;
 
     document.body.appendChild(toast);
@@ -2718,6 +2802,8 @@ document.addEventListener('DOMContentLoaded', () => {
     toast.style.opacity = '1';
 
     const dismissBtn = toast.querySelector('#perfToastDismiss');
+    const revertBtn = toast.querySelector('#perfToastRevert');
+
     const dismissToast = () => {
       toast.style.transform = 'translateY(40px)';
       toast.style.opacity = '0';
@@ -2725,7 +2811,17 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     dismissBtn.addEventListener('click', dismissToast);
+    
+    revertBtn.addEventListener('click', () => {
+      localStorage.setItem('rgpv_perf_profile', 'high');
+      localStorage.removeItem('rgpv_perf_auto_downgraded');
+      setPillActive('high');
+      applyPerformanceProfile('high');
+      monitorPerformance(); // stops the monitoring loop since profile is high
+      dismissToast();
+    });
 
+    // Auto dismiss after 8 seconds
     setTimeout(dismissToast, 8000);
   }
 
