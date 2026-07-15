@@ -2417,7 +2417,10 @@ document.addEventListener('DOMContentLoaded', () => {
           rollInput: rollInput.value,
           includeLateral: includeLateralCheckbox.checked,
           lateralRange: lateralRangeInput.value,
-          inputMode: activeInputMode
+          inputMode: activeInputMode,
+          preserveCourse: !!document.getElementById('lockCourseCheckbox')?.checked,
+          preserveCollege: !!document.getElementById('lockCollegeCheckbox')?.checked,
+          preserveBranch: !!document.getElementById('lockBranchCheckbox')?.checked
         }
       };
 
@@ -2473,7 +2476,10 @@ document.addEventListener('DOMContentLoaded', () => {
         rollInput: rollInput.value,
         includeLateral: includeLateralCheckbox.checked,
         lateralRange: lateralRangeInput.value,
-        inputMode: activeInputMode
+        inputMode: activeInputMode,
+        preserveCourse: !!document.getElementById('lockCourseCheckbox')?.checked,
+        preserveCollege: !!document.getElementById('lockCollegeCheckbox')?.checked,
+        preserveBranch: !!document.getElementById('lockBranchCheckbox')?.checked
       };
 
       // Move updated preset to the top of the list
@@ -2596,6 +2602,20 @@ document.addEventListener('DOMContentLoaded', () => {
     if (config.rollInput !== undefined) rollInput.value = config.rollInput;
     if (config.includeLateral !== undefined) includeLateralCheckbox.checked = config.includeLateral;
     if (config.lateralRange !== undefined) lateralRangeInput.value = config.lateralRange;
+
+    // Restore Preserve checkboxes if defined in preset
+    const lockCourseEl = document.getElementById('lockCourseCheckbox');
+    if (lockCourseEl && config.preserveCourse !== undefined) {
+      lockCourseEl.checked = config.preserveCourse;
+    }
+    const lockCollegeEl = document.getElementById('lockCollegeCheckbox');
+    if (lockCollegeEl && config.preserveCollege !== undefined) {
+      lockCollegeEl.checked = config.preserveCollege;
+    }
+    const lockBranchEl = document.getElementById('lockBranchCheckbox');
+    if (lockBranchEl && config.preserveBranch !== undefined) {
+      lockBranchEl.checked = config.preserveBranch;
+    }
 
     if (config.inputMode !== undefined) {
       activeInputMode = config.inputMode;

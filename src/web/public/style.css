@@ -400,7 +400,7 @@ body.dark-theme .glass:hover {
 .accordion-trigger {
   background: none;
   border: none;
-  color: var(--accent-secondary);
+  color: var(--accent-primary);
   font-size: 0.82rem;
   font-weight: 700;
   cursor: pointer;
@@ -413,6 +413,14 @@ body.dark-theme .glass:hover {
 }
 
 .accordion-trigger:hover {
+  color: var(--accent-secondary);
+}
+
+body.dark-theme .accordion-trigger {
+  color: var(--accent-secondary);
+}
+
+body.dark-theme .accordion-trigger:hover {
   color: var(--accent-primary);
 }
 
