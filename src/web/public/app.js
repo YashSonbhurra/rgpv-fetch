@@ -977,6 +977,31 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // Mappings of courseId to their respective branch codes and labels
+  const COURSE_BRANCH_MAPPINGS = {
+    "1": "ENGINEERING",          // B.E.
+    "2": { "PY": "B.Pharmacy" }, // B.Pharmacy
+    "3": "DIPLOMA",              // Diploma
+    "4": { "MB": "M.B.A." },      // M.B.A.
+    "5": { "MC": "M.C.A." },      // M.C.A.
+    "6": "ENGINEERING",          // M.E.
+    "7": { "PY": "M.Pharmacy" }, // M.Pharmacy
+    "8": "ENGINEERING",          // M.Tech.
+    "10": "ENGINEERING",         // B.E.(PTDC)
+    "11": { "AR": "B.Arch." },   // B.Arch.
+    "20": "ENGINEERING",         // M.Tech. (PT)
+    "21": { "AM": "Master of Applied Management" }, // MAM
+    "22": { "AR": "M.Arch." },   // M.Arch.
+    "23": { "MC": "MCA (DD)" },   // MCA (DD)
+    "24": "ENGINEERING",         // B.Tech.
+    "42": "ENGINEERING",         // B.Tech.(PTDC)
+    "43": { "PY": "B.Pharmacy(PCI)" }, // B.Pharmacy(PCI)
+    "44": "ENGINEERING",         // Ph.D.
+    "51": { "PY": "Pharm D." },   // Pharm D.
+    "53": { "MC": "M.C.A.(2Year)" },   // M.C.A.(2Year)
+    "71": { "PY": "M.Pharm-PCI" }      // M.Pharm-PCI
+  };
+
   // Updates the branch combobox dropdown options dynamically based on selected course
   function updateBranchInput() {
     const courseId = getCourseId();
@@ -984,18 +1009,28 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!dropdown) return;
 
     dropdown.innerHTML = '';
-    const branchesForCourse = branchesData ? branchesData[courseId] : null;
+    
+    // Resolve branch mapping for the selected course
+    const mapping = COURSE_BRANCH_MAPPINGS[courseId];
+    let displayBranches = {};
 
-    if (branchesForCourse) {
-      const sortedBranches = Object.entries(branchesForCourse).sort((a, b) => a[0].localeCompare(b[0]));
-      sortedBranches.forEach(([code, name]) => {
-        const option = document.createElement('div');
-        option.className = 'combobox-option';
-        option.setAttribute('data-value', code);
-        option.textContent = `${name} [${code}]`;
-        dropdown.appendChild(option);
-      });
+    if (mapping === 'ENGINEERING' || mapping === 'DIPLOMA') {
+      displayBranches = branchesData || {};
+    } else if (mapping && typeof mapping === 'object') {
+      displayBranches = mapping;
+    } else {
+      // Fallback: if course is not explicitly mapped, show all engineering branches
+      displayBranches = branchesData || {};
     }
+
+    const sortedBranches = Object.entries(displayBranches).sort((a, b) => a[0].localeCompare(b[0]));
+    sortedBranches.forEach(([code, name]) => {
+      const option = document.createElement('div');
+      option.className = 'combobox-option';
+      option.setAttribute('data-value', code);
+      option.textContent = `${name} [${code}]`;
+      dropdown.appendChild(option);
+    });
 
     // Re-bind mouse events on new options
     const options = Array.from(dropdown.querySelectorAll('.combobox-option'));
