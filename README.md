@@ -26,6 +26,7 @@ Because the results for all RGPV-affiliated colleges are published centrally on 
 - 🚀 **Bulk Fetching:** Scrape results for entire branches, batches, or whole colleges affiliated to RGPV simultaneously.
 - 🧩 **Local Captcha Solving:** OCR solving with no external API charges or dependencies.
 - 💾 **Smart Cache:** Saves fetched results locally in `~/.cache/rgpv-fetch/` to minimize hits to the RGPV servers.
+- 📁 **Custom Presets:** Save your frequently used scraping configurations as presets for later use.
 - 📊 **Rich Export Options:** Export student results directly into **Excel (.xlsx)**, **CSV**, or **JSON** formats.
 - 💻 **Web Analytics Dashboard:** Features a modern, beautiful local web dashboard (served via Express.js) containing various useful statistics.
 
@@ -44,13 +45,15 @@ rgpv-fetch/
     ├── cli/
     │   └── index.js       # CLI entrypoint (Commander.js commands & exports setup)
     ├── lib/
+    │   ├── branches.json  # Mapping of branch codes
     │   ├── colleges.json  # Mapping of college codes
     │   ├── courses.json   # Mapping of course codes
+    │   ├── subjects.json  # Mapping of subject codes
     │   ├── index.js       # Main exports for importing as library
     │   └── scraper.js     # Core scraper engines, captcha preprocessing, and HTML parsers
     └── web/
         ├── server.js      # Express server handling dashboard endpoints
-        └── public/        # Frontend assets (HTML, CSS, JS) for local analytics UI
+        └── public/        # Frontend assets (HTML, CSS, JS) for local dashboard UI
 ```
 
 ---

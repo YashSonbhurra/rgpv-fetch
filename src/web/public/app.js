@@ -162,7 +162,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let particleNetwork = null;
 
   const gradePoints = {
-    'A+': 10, 'A': 9, 'B+': 8, 'B': 7, 'C+': 6, 'C': 5, 'D': 4, 'F': 0, 'ABS': 0, 'W': 0
+    'A+': 10, 'A': 9, 'B+': 8, 'B': 7, 'C+': 6, 'C': 5, 'D': 4, 'F': 0, 'ABS': 0
   };
 
   initApp();
@@ -656,13 +656,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const slider = document.querySelector('.perf-pill-slider');
       if (slider && perfPillButtons.length > 0) {
         if (activeBtn && activeBtn.offsetWidth > 0) {
-          // Precise coordinate-based positioning when drawer is visible
           const offsetLeft = activeBtn.offsetLeft;
           const offsetWidth = activeBtn.offsetWidth;
           slider.style.width = `${offsetWidth}px`;
           slider.style.transform = `translateX(${offsetLeft - 3}px)`; // offset by 3px padding
         } else {
-          // Percentage-based fallback on startup if drawer is hidden
           const widthPercent = 100 / perfPillButtons.length;
           slider.style.width = `calc(${widthPercent}% - 6px)`;
           slider.style.transform = `translateX(calc(${activeIdx * 100}% + ${activeIdx * 4}px))`;
@@ -1066,11 +1064,8 @@ document.addEventListener('DOMContentLoaded', () => {
         option.textContent = `${info.name} (${id})`;
         courseDropdown.appendChild(option);
       });
-
-      // Initialize course combobox listeners
       setupCourseCombobox();
 
-      // Default to B.Tech (24)
       const defaultOpt = Array.from(courseDropdown.querySelectorAll('.combobox-option'))
         .find(opt => opt.getAttribute('data-value') === '24');
       courseSelect.value = defaultOpt ? defaultOpt.textContent : 'B.Tech (24)';
@@ -1099,11 +1094,8 @@ document.addEventListener('DOMContentLoaded', () => {
         option.textContent = `[${code}] ${c.name}${c.city ? ` (${c.city})` : ''}`;
         collegeDropdown.appendChild(option);
       });
-
-      // Initialize college combobox listeners
       setupCollegeCombobox();
 
-      // Default to LNCTE (0176)
       const defaultOpt = Array.from(collegeDropdown.querySelectorAll('.combobox-option'))
         .find(opt => opt.getAttribute('data-value') === '0176');
       collegeSelect.value = defaultOpt ? defaultOpt.textContent : '';
@@ -1355,8 +1347,6 @@ document.addEventListener('DOMContentLoaded', () => {
       tallyPassedCount.textContent = '0';
       tallyGraceCount.textContent = '0';
       tallyFailedCount.textContent = '0';
-
-      // Clear form inputs respecting Preserve checkboxes
       semesterInput.value = '';
 
       const lockCourse = document.getElementById('lockCourseCheckbox')?.checked;
@@ -1385,7 +1375,6 @@ document.addEventListener('DOMContentLoaded', () => {
       collegeSelect.dispatchEvent(new Event('input'));
       courseSelect.dispatchEvent(new Event('input'));
 
-      // Reset active loaded preset tracking
       activePresetId = null;
       if (updatePresetBtn) {
         updatePresetBtn.classList.add('hidden');
@@ -2326,13 +2315,11 @@ document.addEventListener('DOMContentLoaded', () => {
   function setupPresetsManager() {
     if (!savePresetBtn || !loadPresetBtn || !presetsModal || !clearAllPresetsBtn || !closePresetsBtn || !presetsListContainer) return;
 
-    // Show presets modal
     loadPresetBtn.addEventListener('click', () => {
       presetsModal.classList.remove('hidden');
       renderPresetsList();
     });
 
-    // Close presets modal
     closePresetsBtn.addEventListener('click', () => {
       presetsModal.classList.add('hidden');
     });
@@ -2343,7 +2330,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    // Clear all presets
     clearAllPresetsBtn.addEventListener('click', () => {
       if (confirm('Are you sure you want to delete all saved presets? This cannot be undone.')) {
         localStorage.removeItem('rgpv_presets');
@@ -2355,10 +2341,9 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    // Save Preset
     savePresetBtn.addEventListener('click', () => {
       const nickname = prompt('Enter a nickname for this configuration preset:');
-      if (nickname === null) return; // User cancelled
+      if (nickname === null) return;
       if (!nickname.trim()) {
         alert('Preset name cannot be empty.');
         return;
@@ -2366,18 +2351,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const presets = JSON.parse(localStorage.getItem('rgpv_presets') || '[]');
       
-      // Check if nickname already exists
       const nameExists = presets.some(p => p.name.toLowerCase() === nickname.trim().toLowerCase());
       if (nameExists) {
         if (!confirm(`A preset named "${nickname.trim()}" already exists. Do you want to overwrite it?`)) {
           return;
         }
-        // Remove the existing one
         const index = presets.findIndex(p => p.name.toLowerCase() === nickname.trim().toLowerCase());
         if (index > -1) presets.splice(index, 1);
       }
 
-      // Build summary text
       const parts = [];
       const courseText = courseSelect.value ? courseSelect.value.split(' (')[0] : '';
       if (courseText) parts.push(courseText);
@@ -2421,12 +2403,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       };
 
-      presets.unshift(newPreset); // Prepend to show newest first
+      presets.unshift(newPreset);
       localStorage.setItem('rgpv_presets', JSON.stringify(presets));
       alert(`Preset "${newPreset.name}" saved successfully!`);
     });
 
-    // Update Preset
     updatePresetBtn.addEventListener('click', () => {
       if (!activePresetId) return;
 
@@ -2439,7 +2420,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const preset = presets[index];
 
-      // Build summary text
       const parts = [];
       const courseText = courseSelect.value ? courseSelect.value.split(' (')[0] : '';
       if (courseText) parts.push(courseText);
@@ -2479,7 +2459,6 @@ document.addEventListener('DOMContentLoaded', () => {
         preserveBranch: !!document.getElementById('lockBranchCheckbox')?.checked
       };
 
-      // Move updated preset to the top of the list
       presets.splice(index, 1);
       presets.unshift(preset);
 
@@ -2488,7 +2467,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Render the list of presets inside the modal
   function renderPresetsList() {
     presetsListContainer.innerHTML = '';
     const presets = JSON.parse(localStorage.getItem('rgpv_presets') || '[]');
@@ -2527,9 +2505,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
       `;
 
-      // Load Preset on click
       row.addEventListener('click', (e) => {
-        // If clicked on buttons, don't load preset!
         if (e.target.closest('button')) return;
 
         loadPresetValues(preset.config);
@@ -2540,7 +2516,6 @@ document.addEventListener('DOMContentLoaded', () => {
         presetsModal.classList.add('hidden');
       });
 
-      // Edit Preset
       const editBtn = row.querySelector('.edit-preset-btn');
       editBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -2560,7 +2535,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       });
 
-      // Delete Preset
       const deleteBtn = row.querySelector('.delete-preset-btn');
       deleteBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -2627,7 +2601,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    // Trigger change/input events so range previews, comboboxes, and lateral entry toggles update instantly!
     semesterInput.dispatchEvent(new Event('input'));
     semesterInput.dispatchEvent(new Event('change'));
     includeLateralCheckbox.dispatchEvent(new Event('change'));
@@ -2683,7 +2656,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Monitors browser rendering frames to detect sluggish devices and automatically apply Eco mode
   function monitorPerformance() {
-    // Clear any existing monitoring interval
     if (perfMonitorInterval) {
       clearInterval(perfMonitorInterval);
       perfMonitorInterval = null;
@@ -2692,16 +2664,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const savedProfile = localStorage.getItem('rgpv_perf_profile') || 'auto';
     if (savedProfile !== 'auto') return;
 
-    // Reset the auto-downgraded flag on page load to allow a fresh evaluation of Cinematic mode
     localStorage.removeItem('rgpv_perf_auto_downgraded');
     document.body.classList.remove('performance-mode');
 
-    // Run first check after a 5-second delay to allow startup/page-load jank to settle
     setTimeout(() => {
       runSinglePerformanceCheck();
     }, 5000);
 
-    // Schedule periodic checks every 15 seconds to monitor performance changes over time
     perfMonitorInterval = setInterval(() => {
       runSinglePerformanceCheck();
     }, 15000);
@@ -2718,7 +2687,6 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // Skip if already auto-downgraded
     if (localStorage.getItem('rgpv_perf_auto_downgraded') === 'true') {
       if (perfMonitorInterval) {
         clearInterval(perfMonitorInterval);
@@ -2727,7 +2695,6 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // Skip if miner is currently scraping (scraping takes heavy CPU/network load, which creates temporary lag)
     const container = document.querySelector('main.container');
     const isCurrentlyScraping = container && container.classList.contains('mining-active');
     if (isCurrentlyScraping) {
@@ -2742,10 +2709,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let slowFrames = 0;
     let totalFrameTime = 0;
     let lastTime = performance.now();
-    const maxFrames = 60; // monitor for 60 frames (~1s)
+    const maxFrames = 60;
 
     function measureFrame() {
-      // If user switched away from auto mid-check, abort
       const currentProfile = localStorage.getItem('rgpv_perf_profile') || 'auto';
       if (currentProfile !== 'auto') {
         isMonitoringPerformance = false;
@@ -2756,18 +2722,10 @@ document.addEventListener('DOMContentLoaded', () => {
       const delta = now - lastTime;
       lastTime = now;
 
-      // Ignore outlier spikes caused by tab switching or browser suspension
-      if (delta > 80) {
-        return; // wait for next normal frame
-      }
-
-      // Skip first 5 frames to ignore transition anomalies
+      if (delta > 80) return;
       if (frameCount > 5) {
         totalFrameTime += delta;
-        // Count as a slow frame if it takes > 18.0ms (below 55 FPS)
-        if (delta > 18.0) {
-          slowFrames++;
-        }
+        if (delta > 18.0) slowFrames++;
       }
       frameCount++;
 
@@ -2787,7 +2745,6 @@ document.addEventListener('DOMContentLoaded', () => {
           applyPerformanceProfile('auto');
           showPerformanceToast();
 
-          // Stop future checks once downgraded
           if (perfMonitorInterval) {
             clearInterval(perfMonitorInterval);
             perfMonitorInterval = null;
@@ -2807,7 +2764,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const toast = document.createElement('div');
     toast.id = 'perfToastContainer';
     
-    // Use dynamic var variables matching the current active theme color scheme
     toast.style.cssText = `
       position: fixed;
       bottom: 24px;
@@ -2850,9 +2806,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.body.appendChild(toast);
 
-    // Force reflow
     toast.offsetHeight;
-
     toast.style.transform = 'translateY(0)';
     toast.style.opacity = '1';
 
@@ -2872,11 +2826,10 @@ document.addEventListener('DOMContentLoaded', () => {
       localStorage.removeItem('rgpv_perf_auto_downgraded');
       setPillActive('high');
       applyPerformanceProfile('high');
-      monitorPerformance(); // stops the monitoring loop since profile is high
+      monitorPerformance();
       dismissToast();
     });
 
-    // Auto dismiss after 8 seconds
     setTimeout(dismissToast, 8000);
   }
 
@@ -2950,7 +2903,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!this.active) return;
         this.currentCycleIndex = (this.currentCycleIndex + 1) % this.modesList.length;
         this.initModeState();
-      }, 15000); // Cycles every 15s
+      }, 15000);
     }
 
     initModeState() {
@@ -3005,7 +2958,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {
           document.body.classList.remove('cyber-blast-active');
           this.startCalm();
-        }, 2000); // Aggressive shake for aborted is 2s
+        }, 2000);
       } else {
         this.speedMultiplier = 3.2;
         document.body.classList.remove('cyber-blast-active');
@@ -3013,7 +2966,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {
           document.body.classList.remove('cyber-drift-active');
           this.startCalm();
-        }, 1200); // Subtle drift for success is 1.2s
+        }, 1200);
       }
     }
 
@@ -3268,10 +3221,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ripple.style.setProperty('--target-bg', isDark ? '#050811' : '#e8eff7');
 
     document.body.appendChild(ripple);
-
-    // Force reflow
     ripple.offsetHeight;
-
     ripple.classList.add('active');
 
     setTimeout(() => {
@@ -3298,5 +3248,4 @@ document.addEventListener('DOMContentLoaded', () => {
       ripple.remove();
     }, 2600);
   }
-
 });
