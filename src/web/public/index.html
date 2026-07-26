@@ -202,9 +202,9 @@
         <form id="scrapeForm" class="card-body">
           <div class="form-row">
             <div class="form-group" style="flex: 2;">
-              <label for="courseSelect" style="display: flex; align-items: center; gap: 8px;">
+              <label for="courseSelect" style="display: flex; align-items: center;">
                 RGPV Course
-                <label style="display: inline-flex; align-items: center; gap: 4px; font-size: 0.65rem; font-weight: normal; color: var(--text-muted); cursor: pointer; margin-bottom: 0; user-select: none;">
+                <label style="display: inline-flex; align-items: center; gap: 4px; font-size: 0.65rem; font-weight: normal; color: var(--text-muted); cursor: pointer; margin-bottom: 0px; margin-left: 4px; user-select: none;">
                   <input type="checkbox" id="lockCourseCheckbox" class="preserve-check"> Preserve
                 </label>
               </label>
@@ -232,10 +232,10 @@
 
           <div id="helperInputContainer" style="margin-top: 1rem;">
             <div class="form-group">
-              <label for="collegeSelect" style="display: flex; align-items: center; gap: 8px;">
+              <label for="collegeSelect" style="display: flex; align-items: center;">
                 College
                 <span class="info-tooltip-badge" data-tooltip="Select RGPV affiliated college code (e.g. 0176 for LNCT Bhopal, 0103 for Oriental).">?</span>
-                <label style="display: inline-flex; align-items: center; gap: 4px; font-size: 0.65rem; font-weight: normal; color: var(--text-muted); cursor: pointer; margin-bottom: 0; user-select: none;">
+                <label style="display: inline-flex; align-items: center; gap: 4px; font-size: 0.65rem; font-weight: normal; color: var(--text-muted); cursor: pointer; margin-bottom: 0px; margin-left: 4px; user-select: none;">
                   <input type="checkbox" id="lockCollegeCheckbox" class="preserve-check" checked> Preserve
                 </label>
               </label>
@@ -255,10 +255,10 @@
                 <input type="number" id="yearInput" min="10" max="99" placeholder="e.g. 23" maxlength="2">
               </div>
               <div class="form-group" style="flex: 1;">
-                <label for="branchInput" style="display: flex; align-items: center; gap: 8px;">
+                <label for="branchInput" style="display: flex; align-items: center;">
                   Branch Code
                   <span class="info-tooltip-badge" data-tooltip="Select a department branch identifier (e.g. CS, AL, CY, DS, EC, IT).">?</span>
-                  <label style="display: inline-flex; align-items: center; gap: 4px; font-size: 0.65rem; font-weight: normal; color: var(--text-muted); cursor: pointer; margin-bottom: 0; user-select: none;">
+                  <label style="display: inline-flex; align-items: center; gap: 4px; font-size: 0.65rem; font-weight: normal; color: var(--text-muted); cursor: pointer; margin-bottom: 0px; margin-left: 4px; user-select: none;">
                     <input type="checkbox" id="lockBranchCheckbox" class="preserve-check"> Preserve
                   </label>
                 </label>
@@ -272,11 +272,15 @@
 
             <div class="form-row" style="margin-top: 1rem;">
               <div class="form-group" style="flex: 0.8;">
-                <label for="rangeStartInput">Start</label>
+                <label for="rangeStartInput">Start
+                  <span class="info-tooltip-badge" data-tooltip="Starting roll number (e.g. 101), defaults to 1.">?</span>
+                </label>
                 <input type="number" id="rangeStartInput" min="1" max="999" value="1" placeholder="e.g. 001" maxlength="3">
               </div>
               <div class="form-group" style="flex: 0.8;">
-                <label for="rangeEndInput">End <span style="font-size: 0.72rem; font-weight: normal; color: var(--text-muted);">(leave empty)</span></label>
+                <label for="rangeEndInput">End
+                  <span class="info-tooltip-badge" data-tooltip="Ending roll number (e.g. 150), inclusive. Leave empty to keep scraping until no more results can be found.">?</span>
+                </label>
                 <input type="number" id="rangeEndInput" min="1" max="999" placeholder="e.g. 060" maxlength="3">
               </div>
               <div class="form-group" style="flex: 2.4; align-items: flex-start; justify-content: flex-end;">
@@ -353,7 +357,7 @@
           <div class="form-actions">
             <button type="submit" id="startBtn" class="btn btn-primary btn-glow">Start Miner</button>
             <button type="button" id="stopBtn" class="btn btn-danger" disabled>Abort Job</button>
-            <button type="button" id="resetBtn" class="btn btn-secondary">Clear</button>
+            <button type="button" id="resetBtn" class="btn btn-secondary">CLEAR</button>
           </div>
         </form>
       </section>

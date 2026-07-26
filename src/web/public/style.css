@@ -275,7 +275,6 @@ body.dark-theme .glass:hover {
 .card {
   display: flex;
   flex-direction: column;
-  overflow: hidden;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -286,6 +285,7 @@ body.dark-theme .glass:hover {
 .card-header {
   padding: 1.5rem;
   border-bottom: 1px solid var(--card-border);
+  border-radius: 16px;
   background: var(--bg-primary);
 }
 
@@ -400,7 +400,7 @@ body.dark-theme .glass:hover {
 .accordion-trigger {
   background: none;
   border: none;
-  color: var(--accent-secondary);
+  color: var(--accent-primary);
   font-size: 0.82rem;
   font-weight: 700;
   cursor: pointer;
@@ -413,6 +413,15 @@ body.dark-theme .glass:hover {
 }
 
 .accordion-trigger:hover {
+  color: var(--accent-secondary);
+}
+
+
+body.dark-theme .accordion-trigger {
+  color: var(--accent-secondary);
+}
+
+body.dark-theme .accordion-trigger:hover {
   color: var(--accent-primary);
 }
 
@@ -1462,13 +1471,13 @@ footer p {
   justify-content: center;
   width: 14px;
   height: 14px;
+  margin-left: 4px;
   font-size: 0.65rem;
   font-weight: 800;
   color: var(--text-muted);
   background: var(--toggle-bg);
   border: 1px solid var(--card-border);
   border-radius: 50%;
-  margin-left: 0.35rem;
   cursor: help;
   position: relative;
   transition: all 0.2s ease;
@@ -1479,6 +1488,7 @@ footer p {
   color: var(--accent-primary);
   border-color: var(--accent-primary);
   background: var(--bg-primary);
+  margin-left: 4px;
 }
 
 .info-tooltip-badge::after {
@@ -1495,19 +1505,22 @@ footer p {
   font-weight: 500;
   line-height: 1.4;
   width: 220px;
+  margin-left: 1rem;
+  margin-right: 1rem;
   text-align: left;
   box-shadow: var(--tooltip-shadow);
   border: 1px solid var(--tooltip-border);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  z-index: 100;
   white-space: normal;
 }
 
 .info-tooltip-badge:hover::after {
   opacity: 1;
   transform: translateX(-50%) scale(1);
+  margin-left: 1rem;
+  margin-right: 1rem;
 }
 
 /* Particle Canvas Backdrop Overlay */

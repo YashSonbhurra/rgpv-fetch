@@ -1002,7 +1002,6 @@ document.addEventListener('DOMContentLoaded', () => {
     "71": { "PY": "M.Pharm-PCI" }      // M.Pharm-PCI
   };
 
-  // Updates the branch combobox dropdown options dynamically based on selected course
   function updateBranchInput() {
     const courseId = getCourseId();
     const dropdown = document.getElementById('branchDropdown');
@@ -1010,20 +1009,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     dropdown.innerHTML = '';
     
-    // Resolve branch mapping for the selected course
     const mapping = COURSE_BRANCH_MAPPINGS[courseId];
     let displayBranches = {};
 
-    if (mapping === 'ENGINEERING' || mapping === 'DIPLOMA') {
+    if (mapping === 'ENGINEERING') {
       displayBranches = branchesData || {};
     } else if (mapping && typeof mapping === 'object') {
       displayBranches = mapping;
     } else {
-      // Fallback: if course is not explicitly mapped, show all engineering branches
-      displayBranches = branchesData || {};
+      displayBranches = {};
     }
 
-    const sortedBranches = Object.entries(displayBranches).sort((a, b) => a[0].localeCompare(b[0]));
+    const sortedBranches = Object.entries(displayBranches).sort((a, b) => a[1].localeCompare(b[1]));
     sortedBranches.forEach(([code, name]) => {
       const option = document.createElement('div');
       option.className = 'combobox-option';
@@ -1032,7 +1029,6 @@ document.addEventListener('DOMContentLoaded', () => {
       dropdown.appendChild(option);
     });
 
-    // Re-bind mouse events on new options
     const options = Array.from(dropdown.querySelectorAll('.combobox-option'));
     options.forEach(opt => {
       opt.addEventListener('mousedown', (e) => {
@@ -1042,6 +1038,7 @@ document.addEventListener('DOMContentLoaded', () => {
         dropdown.classList.add('hidden');
         branchInput.dispatchEvent(new Event('input'));
         branchInput.dispatchEvent(new Event('change'));
+        updateRangePreview();
       });
     });
 
@@ -1106,7 +1103,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // Initialize college combobox listeners
       setupCollegeCombobox();
 
-      // Default to LNCT (0176)
+      // Default to LNCTE (0176)
       const defaultOpt = Array.from(collegeDropdown.querySelectorAll('.combobox-option'))
         .find(opt => opt.getAttribute('data-value') === '0176');
       collegeSelect.value = defaultOpt ? defaultOpt.textContent : '';
@@ -1461,7 +1458,9 @@ document.addEventListener('DOMContentLoaded', () => {
     delayInput.disabled = true;
     retriesInput.disabled = true;
     cacheCheckbox.disabled = true;
-    rememberSetupCheckbox.disabled = true;
+    if (savePresetBtn) savePresetBtn.disabled = true;
+    if (updatePresetBtn) updatePresetBtn.disabled = true;
+    if (loadPresetBtn) loadPresetBtn.disabled = true;
     includeLateralCheckbox.disabled = true;
     lateralRangeInput.disabled = true;
   }
@@ -1483,7 +1482,9 @@ document.addEventListener('DOMContentLoaded', () => {
     delayInput.disabled = false;
     retriesInput.disabled = false;
     cacheCheckbox.disabled = false;
-    rememberSetupCheckbox.disabled = false;
+    if (savePresetBtn) savePresetBtn.disabled = false;
+    if (updatePresetBtn) updatePresetBtn.disabled = false;
+    if (loadPresetBtn) loadPresetBtn.disabled = false;
     includeLateralCheckbox.disabled = false;
     lateralRangeInput.disabled = false;
   }
@@ -2413,7 +2414,10 @@ document.addEventListener('DOMContentLoaded', () => {
           rollInput: rollInput.value,
           includeLateral: includeLateralCheckbox.checked,
           lateralRange: lateralRangeInput.value,
-          inputMode: activeInputMode
+          inputMode: activeInputMode,
+          preserveCourse: !!document.getElementById('lockCourseCheckbox')?.checked,
+          preserveCollege: !!document.getElementById('lockCollegeCheckbox')?.checked,
+          preserveBranch: !!document.getElementById('lockBranchCheckbox')?.checked
         }
       };
 
@@ -2469,7 +2473,10 @@ document.addEventListener('DOMContentLoaded', () => {
         rollInput: rollInput.value,
         includeLateral: includeLateralCheckbox.checked,
         lateralRange: lateralRangeInput.value,
-        inputMode: activeInputMode
+        inputMode: activeInputMode,
+        preserveCourse: !!document.getElementById('lockCourseCheckbox')?.checked,
+        preserveCollege: !!document.getElementById('lockCollegeCheckbox')?.checked,
+        preserveBranch: !!document.getElementById('lockBranchCheckbox')?.checked
       };
 
       // Move updated preset to the top of the list
@@ -2592,6 +2599,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if (config.rollInput !== undefined) rollInput.value = config.rollInput;
     if (config.includeLateral !== undefined) includeLateralCheckbox.checked = config.includeLateral;
     if (config.lateralRange !== undefined) lateralRangeInput.value = config.lateralRange;
+
+    const lockCourseEl = document.getElementById('lockCourseCheckbox');
+    if (lockCourseEl && config.preserveCourse !== undefined) {
+      lockCourseEl.checked = config.preserveCourse;
+    }
+    const lockCollegeEl = document.getElementById('lockCollegeCheckbox');
+    if (lockCollegeEl && config.preserveCollege !== undefined) {
+      lockCollegeEl.checked = config.preserveCollege;
+    }
+    const lockBranchEl = document.getElementById('lockBranchCheckbox');
+    if (lockBranchEl && config.preserveBranch !== undefined) {
+      lockBranchEl.checked = config.preserveBranch;
+    }
 
     if (config.inputMode !== undefined) {
       activeInputMode = config.inputMode;
