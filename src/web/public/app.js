@@ -1,18 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-  // Extracts RGPV course ID from combobox input text (e.g. "B.Tech (24)" -> "24")
-  function getCourseId() {
-    const val = courseSelect.value || '';
-    const match = val.match(/\((\d+)\)/);
-    return match ? match[1] : val.trim();
-  }
-
-  // Extracts college code from combobox input text (e.g. "LNCT [0176]" or "[0176] LNCT" -> "0176")
-  function getCollegeCode() {
-    const val = collegeSelect.value || '';
-    const match = val.match(/\[([a-zA-Z0-9]+)\]/);
-    return match ? match[1] : val.trim().substring(0, 4);
-  }
-
   const scrapeForm = document.getElementById('scrapeForm');
   const courseSelect = document.getElementById('courseSelect');
   const semesterInput = document.getElementById('semesterInput');
@@ -104,19 +90,29 @@ document.addEventListener('DOMContentLoaded', () => {
   const disclaimerLink = document.getElementById('disclaimerLink');
   const closeDisclaimerBtn = document.getElementById('closeDisclaimerBtn');
 
+  // Extracts RGPV course ID from combobox input text (e.g. "B.Tech (24)" -> "24")
+  function getCourseId() {
+    const val = courseSelect.value || '';
+    const match = val.match(/\((\d+)\)/);
+    return match ? match[1] : val.trim();
+  }
+
+  // Extracts college code from combobox input text (e.g. "LNCT [0176]" or "[0176] LNCT" -> "0176")
+  function getCollegeCode() {
+    const val = collegeSelect.value || '';
+    const match = val.match(/\[([a-zA-Z0-9]+)\]/);
+    return match ? match[1] : val.trim().substring(0, 4);
+  }
+
   let coursesData = {};
   let globalCollegesData = {};
   let studentsResults = [];
   let activeBranchesList = [];
   let eventSource = null;
-  let currentActiveTab = 'explorer';
   let currentSelectedSubject = '';
   let activeInputMode = 'visual';
   let activeJobCourseId = '';
   let activeJobSemester = '';
-  let pendingSavedCollege = '';
-  let pendingSavedCourse = '';
-  const SETUP_STORAGE_KEY = 'rgpv_fetch_setup';
   let currentSortCol = 'enrollId';
   let currentSortDir = 'asc';
   let previousJobStatus = 'idle';
@@ -157,13 +153,9 @@ document.addEventListener('DOMContentLoaded', () => {
     audio.volume = vol;
     audio.currentTime = 0;
     audio.play()
-      .catch((err) => console.error(`[SFX] Playback failed:`, err));
+      .catch((err) => console.error('[SFX] Playback failed:', err));
   }
   let particleNetwork = null;
-
-  const gradePoints = {
-    'A+': 10, 'A': 9, 'B+': 8, 'B': 7, 'C+': 6, 'C': 5, 'D': 4, 'F': 0, 'ABS': 0
-  };
 
   initApp();
 
@@ -236,7 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!student) return;
 
     const clgCode = student.enrollId.substring(0, 4);
-    let collegeName = 'N/A';
+    let collegeName;
     if (globalCollegesData[clgCode]) {
       collegeName = globalCollegesData[clgCode].name || globalCollegesData[clgCode];
     } else {
@@ -255,7 +247,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const semester = student.semester || activeJobSemester || semesterInput.value || 'N/A';
 
-    let subjectsHtml = '';
+    let subjectsHtml;
     if (student.format === 'grading') {
       subjectsHtml = `
         <div class="marksheet-table-container">
@@ -425,7 +417,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const dy = elY - centerLimitY;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
-        // Calculate delay proportional to distance from center (0.4ms per pixel)
         const delay = Math.round(dist * 0.4);
 
         el.style.transition = 'background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
@@ -433,7 +424,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
 
       // Force layout calculation
-      document.body.offsetHeight;
+      void document.body.offsetHeight;
 
       document.body.classList.toggle('dark-theme', isDark);
       themeIcon.textContent = isDark ? '☀️' : '🌙';
@@ -454,7 +445,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const clearCacheBtn = document.getElementById('clearCacheBtn');
     if (!clearCacheBtn) return;
 
-    clearCacheBtn.addEventListener('click', async (e) => {
+    clearCacheBtn.addEventListener('click', async () => {
       const isScraping = statusLabel.textContent === 'Scraping';
       if (isScraping) {
         alert('Cannot clear cache while a scraping job is active.');
@@ -476,10 +467,10 @@ document.addEventListener('DOMContentLoaded', () => {
           alert(data.message);
           spawnTrashFountain(clearCacheBtn);
         } else {
-          alert('Error: ' + (data.error || 'Failed to clear cache'));
+          alert(`Error: ${data.error || 'Failed to clear cache'}`);
         }
       } catch (err) {
-        alert('Request failed: ' + err.message);
+        alert(`Request failed: ${err.message}`);
       } finally {
         clearCacheBtn.disabled = false;
         clearCacheBtn.style.opacity = '';
@@ -505,8 +496,8 @@ document.addEventListener('DOMContentLoaded', () => {
         tabContents.forEach(c => c.classList.remove('active'));
 
         btn.classList.add('active');
-        document.getElementById(`tab-${tabId}`).classList.add('active');
-        currentActiveTab = tabId;
+        const panelId = `tab${tabId.charAt(0).toUpperCase()}${tabId.slice(1)}`;
+        document.getElementById(panelId).classList.add('active');
       });
     });
   }
@@ -544,7 +535,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       let x = originX;
       let y = originY;
-      let vx = (Math.random() - 0.5) * 6;
+      const vx = (Math.random() - 0.5) * 6;
       let vy = -Math.random() * 8 - 4;
       const gravity = 0.4;
       let angle = Math.random() * 360;
@@ -607,13 +598,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (fontSizeSlider && fontSizeDisplay) {
       const applySize = (size) => {
-        document.documentElement.style.fontSize = size + 'px';
-        fontSizeDisplay.textContent = size + 'px';
+        document.documentElement.style.fontSize = `${size  }px`;
+        fontSizeDisplay.textContent = `${size  }px`;
         localStorage.setItem('rgpv_fetch_custom_font_size', size);
       };
 
       fontSizeSlider.addEventListener('input', (e) => {
-        fontSizeDisplay.textContent = e.target.value + 'px';
+        fontSizeDisplay.textContent = `${e.target.value  }px`;
       });
 
       fontSizeSlider.addEventListener('change', (e) => {
@@ -640,41 +631,13 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    function setPillActive(val) {
-      let activeIdx = 0;
-      let activeBtn = null;
-      perfPillButtons.forEach((btn, idx) => {
-        if (btn.getAttribute('data-value') === val) {
-          btn.classList.add('active');
-          activeBtn = btn;
-          activeIdx = idx;
-        } else {
-          btn.classList.remove('active');
-        }
-      });
-
-      const slider = document.querySelector('.perf-pill-slider');
-      if (slider && perfPillButtons.length > 0) {
-        if (activeBtn && activeBtn.offsetWidth > 0) {
-          const offsetLeft = activeBtn.offsetLeft;
-          const offsetWidth = activeBtn.offsetWidth;
-          slider.style.width = `${offsetWidth}px`;
-          slider.style.transform = `translateX(${offsetLeft - 3}px)`; // offset by 3px padding
-        } else {
-          const widthPercent = 100 / perfPillButtons.length;
-          slider.style.width = `calc(${widthPercent}% - 6px)`;
-          slider.style.transform = `translateX(calc(${activeIdx * 100}% + ${activeIdx * 4}px))`;
-        }
-      }
-    }
-
     if (perfPillButtons.length > 0) {
       perfPillButtons.forEach(btn => {
         btn.addEventListener('click', () => {
           const val = btn.getAttribute('data-value');
           localStorage.setItem('rgpv_perf_profile', val);
           localStorage.removeItem('rgpv_perf_auto_downgraded');
-          if (val === 'auto') monitorPerformance();                                                                                                   
+          if (val === 'auto') monitorPerformance();
           setPillActive(val);
           applyPerformanceProfile(val);
         });
@@ -789,7 +752,7 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('Styles reset successfully, but server failed to reset scraping state.');
           }
         } catch (err) {
-          alert('Styles reset successfully, but error communicating with server reset: ' + err.message);
+          alert(`Styles reset successfully, but error communicating with server reset: ${err.message}`);
         }
       });
     }
@@ -802,7 +765,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (sfxToggle && sfxVolumeSlider && sfxVolumeDisplay && sfxVolumeContainer) {
       const updateVolumeText = (val) => {
-        sfxVolumeDisplay.textContent = val + '%';
+        sfxVolumeDisplay.textContent = `${val  }%`;
         const vol = parseFloat(val) / 100;
         sfxConfirm.volume = vol;
         sfxSuccess.volume = vol;
@@ -875,14 +838,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (matrixBgToggle && matrixSettingsContainer && matrixIdleSizeSlider && matrixIdleSizeDisplay && matrixActiveSizeSlider && matrixActiveSizeDisplay && animationSelect) {
 
       const updateIdleSizeText = (val) => {
-        matrixIdleSizeDisplay.textContent = val + '%';
+        matrixIdleSizeDisplay.textContent = `${val  }%`;
         if (particleNetwork) {
           particleNetwork.idleSize = parseFloat(val);
         }
       };
 
       const updateActiveSizeText = (val) => {
-        matrixActiveSizeDisplay.textContent = val + '%';
+        matrixActiveSizeDisplay.textContent = `${val  }%`;
         if (particleNetwork) {
           particleNetwork.activeSize = parseFloat(val);
         }
@@ -977,27 +940,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Mappings of courseId to their respective branch codes and labels
   const COURSE_BRANCH_MAPPINGS = {
-    "1": "ENGINEERING",          // B.E.
-    "2": { "PY": "B.Pharmacy" }, // B.Pharmacy
-    "3": "DIPLOMA",              // Diploma
-    "4": { "MB": "M.B.A." },      // M.B.A.
-    "5": { "MC": "M.C.A." },      // M.C.A.
-    "6": "ENGINEERING",          // M.E.
-    "7": { "PY": "M.Pharmacy" }, // M.Pharmacy
-    "8": "ENGINEERING",          // M.Tech.
-    "10": "ENGINEERING",         // B.E.(PTDC)
-    "11": { "AR": "B.Arch." },   // B.Arch.
-    "20": "ENGINEERING",         // M.Tech. (PT)
-    "21": { "AM": "Master of Applied Management" }, // MAM
-    "22": { "AR": "M.Arch." },   // M.Arch.
-    "23": { "MC": "MCA (DD)" },   // MCA (DD)
-    "24": "ENGINEERING",         // B.Tech.
-    "42": "ENGINEERING",         // B.Tech.(PTDC)
-    "43": { "PY": "B.Pharmacy(PCI)" }, // B.Pharmacy(PCI)
-    "44": "ENGINEERING",         // Ph.D.
-    "51": { "PY": "Pharm D." },   // Pharm D.
-    "53": { "MC": "M.C.A.(2Year)" },   // M.C.A.(2Year)
-    "71": { "PY": "M.Pharm-PCI" }      // M.Pharm-PCI
+    '1': 'ENGINEERING',          // B.E.
+    '2': { 'PY': 'B.Pharmacy' }, // B.Pharmacy
+    '3': 'DIPLOMA',              // Diploma
+    '4': { 'MB': 'M.B.A.' },      // M.B.A.
+    '5': { 'MC': 'M.C.A.' },      // M.C.A.
+    '6': 'ENGINEERING',          // M.E.
+    '7': { 'PY': 'M.Pharmacy' }, // M.Pharmacy
+    '8': 'ENGINEERING',          // M.Tech.
+    '10': 'ENGINEERING',         // B.E.(PTDC)
+    '11': { 'AR': 'B.Arch.' },   // B.Arch.
+    '20': 'ENGINEERING',         // M.Tech. (PT)
+    '21': { 'AM': 'Master of Applied Management' }, // MAM
+    '22': { 'AR': 'M.Arch.' },   // M.Arch.
+    '23': { 'MC': 'MCA (DD)' },   // MCA (DD)
+    '24': 'ENGINEERING',         // B.Tech.
+    '42': 'ENGINEERING',         // B.Tech.(PTDC)
+    '43': { 'PY': 'B.Pharmacy(PCI)' }, // B.Pharmacy(PCI)
+    '44': 'ENGINEERING',         // Ph.D.
+    '51': { 'PY': 'Pharm D.' },   // Pharm D.
+    '53': { 'MC': 'M.C.A.(2Year)' },   // M.C.A.(2Year)
+    '71': { 'PY': 'M.Pharm-PCI' }      // M.Pharm-PCI
   };
 
   function updateBranchInput() {
@@ -1006,9 +969,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!dropdown) return;
 
     dropdown.innerHTML = '';
-    
+
     const mapping = COURSE_BRANCH_MAPPINGS[courseId];
-    let displayBranches = {};
+    let displayBranches;
 
     if (mapping === 'ENGINEERING') {
       displayBranches = branchesData || {};
@@ -1156,7 +1119,6 @@ document.addEventListener('DOMContentLoaded', () => {
       } else if (data.status === 'completed' || data.status === 'aborted' || data.status === 'failed') {
         unlockUI();
 
-        // Pause and reset "Let him cook now" SFX on completion, abort, or error
         sfxCook.pause();
         sfxCook.currentTime = 0;
 
@@ -1214,7 +1176,7 @@ document.addEventListener('DOMContentLoaded', () => {
   scrapeForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    let finalRollInput = '';
+    let finalRollInput;
 
     if (activeInputMode === 'visual') {
       const clg = getCollegeCode();
@@ -1368,7 +1330,6 @@ document.addEventListener('DOMContentLoaded', () => {
       rangeEndInput.value = '';
       yearInput.value = '';
 
-      // Dispatch events so range previews, comboboxes, and lateral entry toggles update instantly!
       semesterInput.dispatchEvent(new Event('input'));
       semesterInput.dispatchEvent(new Event('change'));
       branchInput.dispatchEvent(new Event('input'));
@@ -1795,16 +1756,16 @@ document.addEventListener('DOMContentLoaded', () => {
           let grade = subInfo.grade.trim().toUpperCase();
 
           if (grade.includes('ABS') || grade === 'AB') {
-            gradeCounts['ABS']++;
+            gradeCounts.ABS++;
           } else if (grade === 'NA') {
-            gradeCounts['NA']++;
+            gradeCounts.NA++;
           } else {
             // Strip grace hashtags, e.g. C## -> C
             grade = grade.replace(/#/g, '');
             if (gradeCounts[grade] !== undefined) {
               gradeCounts[grade]++;
             } else {
-              gradeCounts['F']++;
+              gradeCounts.F++;
             }
           }
         }
@@ -1845,7 +1806,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Synchronizes visual helper values to render the generated enrollment range preview
   function updateRangePreview() {
     const clgCode = getCollegeCode();
-    const clg = clgCode ? clgCode : '____';
+    const clg = clgCode || '____';
     const branchRaw = (branchInput.value || '__').trim();
     const year = String(yearInput.value || '__').trim();
     const type = '1';
@@ -1963,58 +1924,6 @@ document.addEventListener('DOMContentLoaded', () => {
       wrapper.classList.add('hidden');
       select.value = 'ALL';
     }
-
-    updateExportDropdown(branches);
-  }
-
-  // Updates export format items depending on available branch codes
-  function updateExportDropdown(branches) {
-    const menu = document.getElementById('exportDropdown');
-    menu.innerHTML = '';
-
-    const buildGroup = (label, branchVal) => {
-      const header = document.createElement('div');
-      header.className = 'dropdown-header';
-      header.style.padding = '0.4rem 0.8rem 0.2rem 0.8rem';
-      header.style.fontSize = '0.7rem';
-      header.style.fontWeight = 'bold';
-      header.style.textTransform = 'uppercase';
-      header.style.color = 'var(--text-muted)';
-      header.style.borderTop = menu.children.length > 0 ? '1px solid var(--border-color)' : 'none';
-      header.style.marginTop = menu.children.length > 0 ? '0.3rem' : '0';
-      header.textContent = label;
-      menu.appendChild(header);
-
-      const formats = [
-        { type: 'xlsx', text: 'Excel Document (.xlsx)' },
-        { type: 'csv', text: 'CSV Table (.csv)' },
-        { type: 'json', text: 'JSON File (.json)' }
-      ];
-
-      formats.forEach(f => {
-        const btn = document.createElement('button');
-        btn.className = 'dropdown-item';
-        btn.style.paddingLeft = '1.5rem';
-        btn.style.fontSize = '0.8rem';
-        btn.textContent = f.text;
-        btn.addEventListener('click', () => {
-          const courseId = courseSelect.value;
-          const semester = semesterInput.value;
-          window.open(`/api/scrape/export?format=${f.type}&courseId=${courseId}&sem=${semester}&branch=${branchVal}`, '_blank');
-        });
-        menu.appendChild(btn);
-      });
-    };
-
-    if (branches.length > 1) {
-      branches.forEach(br => {
-        buildGroup(`${br} Branch`, br);
-      });
-      buildGroup('Combined (All)', 'ALL');
-    } else {
-      const br = branches[0] || 'ALL';
-      buildGroup('Export', br);
-    }
   }
 
   document.getElementById('branchFilter').addEventListener('change', () => {
@@ -2034,19 +1943,16 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     };
 
-    // Listen on user text input, focus or clicks to update clear button visibility
     inputEl.addEventListener('input', updateClearButton);
     inputEl.addEventListener('focus', updateClearButton);
     inputEl.addEventListener('click', updateClearButton);
 
-    // Hide clear button when clicking outside
     document.addEventListener('mousedown', (e) => {
       if (!inputEl.contains(e.target) && !dropdownEl.contains(e.target) && !clearBtnEl.contains(e.target)) {
         clearBtnEl.classList.add('hidden');
       }
     });
 
-    // Handle quick clear event
     clearBtnEl.addEventListener('mousedown', (e) => {
       e.preventDefault(); // Prevent input from losing focus
       inputEl.value = '';
@@ -2090,7 +1996,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (activeIndex >= 0 && activeIndex < visibleOpts.length) {
           e.preventDefault();
           const opt = visibleOpts[activeIndex];
-          
+
           const mousedownEvent = new MouseEvent('mousedown', {
             bubbles: true,
             cancelable: true,
@@ -2121,193 +2027,94 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Searchable Combobox handler for RGPV Course Select
-  function setupCourseCombobox() {
-    const courseDropdown = document.getElementById('courseDropdown');
-    if (!courseSelect || !courseDropdown) return;
+  // Wires up a searchable combobox: filtering, open/close, keyboard nav, clear button and selection
+  function setupCombobox({ input, dropdownId, clearBtnId, normalize, transformInput, optionValue }) {
+    const dropdown = document.getElementById(dropdownId);
+    if (!input || !dropdown) return;
+
+    const filterOptions = () => {
+      const val = normalize(input.value);
+      dropdown.querySelectorAll('.combobox-option').forEach(opt => {
+        const text = normalize(opt.textContent);
+        const value = normalize(opt.getAttribute('data-value'));
+        opt.classList.toggle('hidden', !text.includes(val) && !value.includes(val));
+      });
+    };
 
     const showDropdown = () => {
-      courseDropdown.classList.remove('hidden');
+      dropdown.classList.remove('hidden');
       filterOptions();
     };
 
-    const filterOptions = () => {
-      const val = courseSelect.value.toLowerCase().replace(/[\.\s]+/g, '');
-      const options = Array.from(courseDropdown.querySelectorAll('.combobox-option'));
-      options.forEach(opt => {
-        const text = opt.textContent.toLowerCase().replace(/[\.\s]+/g, '');
-        const value = opt.getAttribute('data-value').toLowerCase().replace(/[\.\s]+/g, '');
-        if (text.includes(val) || value.includes(val)) {
-          opt.classList.remove('hidden');
-        } else {
-          opt.classList.add('hidden');
-        }
-      });
-    };
+    if (!input.dataset.listenerInitialized) {
+      input.dataset.listenerInitialized = 'true';
 
-    if (!courseSelect.dataset.listenerInitialized) {
-      courseSelect.dataset.listenerInitialized = 'true';
-
-      courseSelect.addEventListener('focus', showDropdown);
-      courseSelect.addEventListener('click', showDropdown);
+      input.addEventListener('focus', showDropdown);
+      input.addEventListener('click', showDropdown);
 
       document.addEventListener('mousedown', (e) => {
-        if (!courseSelect.contains(e.target) && !courseDropdown.contains(e.target)) {
-          courseDropdown.classList.add('hidden');
+        if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+          dropdown.classList.add('hidden');
         }
       });
 
-      courseSelect.addEventListener('input', () => {
+      input.addEventListener('input', () => {
+        if (transformInput) input.value = transformInput(input.value);
         filterOptions();
       });
 
-      enableComboboxKeyboardNavigation(courseSelect, courseDropdown);
+      enableComboboxKeyboardNavigation(input, dropdown);
 
-      const courseClearBtn = document.getElementById('courseClearBtn');
-      if (courseClearBtn) {
-        enableComboboxClearButton(courseSelect, courseDropdown, courseClearBtn);
+      const clearBtn = document.getElementById(clearBtnId);
+      if (clearBtn) {
+        enableComboboxClearButton(input, dropdown, clearBtn);
       }
     }
 
-    const options = Array.from(courseDropdown.querySelectorAll('.combobox-option'));
-    options.forEach(opt => {
+    dropdown.querySelectorAll('.combobox-option').forEach(opt => {
       opt.addEventListener('mousedown', (e) => {
         e.preventDefault();
-        
-        const fullText = opt.textContent;
-        courseSelect.value = fullText;
-        courseDropdown.classList.add('hidden');
-        
-        courseSelect.dispatchEvent(new Event('input'));
-        courseSelect.dispatchEvent(new Event('change'));
+
+        input.value = optionValue(opt);
+        dropdown.classList.add('hidden');
+
+        input.dispatchEvent(new Event('input'));
+        input.dispatchEvent(new Event('change'));
       });
+    });
+  }
+
+  // Searchable Combobox handler for RGPV Course Select
+  function setupCourseCombobox() {
+    setupCombobox({
+      input: courseSelect,
+      dropdownId: 'courseDropdown',
+      clearBtnId: 'courseClearBtn',
+      normalize: str => str.toLowerCase().replace(/[.\s]+/g, ''),
+      optionValue: opt => opt.textContent
     });
   }
 
   // Searchable Combobox handler for College Select
   function setupCollegeCombobox() {
-    const collegeDropdown = document.getElementById('collegeDropdown');
-    if (!collegeSelect || !collegeDropdown) return;
-
-    const showDropdown = () => {
-      collegeDropdown.classList.remove('hidden');
-      filterOptions();
-    };
-
-    const filterOptions = () => {
-      const val = collegeSelect.value.toLowerCase();
-      const options = Array.from(collegeDropdown.querySelectorAll('.combobox-option'));
-      options.forEach(opt => {
-        const text = opt.textContent.toLowerCase();
-        const value = opt.getAttribute('data-value').toLowerCase();
-        if (text.includes(val) || value.includes(val)) {
-          opt.classList.remove('hidden');
-        } else {
-          opt.classList.add('hidden');
-        }
-      });
-    };
-
-    if (!collegeSelect.dataset.listenerInitialized) {
-      collegeSelect.dataset.listenerInitialized = 'true';
-
-      collegeSelect.addEventListener('focus', showDropdown);
-      collegeSelect.addEventListener('click', showDropdown);
-
-      document.addEventListener('mousedown', (e) => {
-        if (!collegeSelect.contains(e.target) && !collegeDropdown.contains(e.target)) {
-          collegeDropdown.classList.add('hidden');
-        }
-      });
-
-      collegeSelect.addEventListener('input', () => {
-        filterOptions();
-      });
-
-      enableComboboxKeyboardNavigation(collegeSelect, collegeDropdown);
-
-      const collegeClearBtn = document.getElementById('collegeClearBtn');
-      if (collegeClearBtn) {
-        enableComboboxClearButton(collegeSelect, collegeDropdown, collegeClearBtn);
-      }
-    }
-
-    const options = Array.from(collegeDropdown.querySelectorAll('.combobox-option'));
-    options.forEach(opt => {
-      opt.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        
-        const fullText = opt.textContent;
-        collegeSelect.value = fullText;
-        collegeDropdown.classList.add('hidden');
-        
-        collegeSelect.dispatchEvent(new Event('input'));
-        collegeSelect.dispatchEvent(new Event('change'));
-      });
+    setupCombobox({
+      input: collegeSelect,
+      dropdownId: 'collegeDropdown',
+      clearBtnId: 'collegeClearBtn',
+      normalize: str => str.toLowerCase(),
+      optionValue: opt => opt.textContent
     });
   }
 
   // Searchable Combobox handler for Branch Select
   function setupBranchCombobox() {
-    const branchDropdown = document.getElementById('branchDropdown');
-    if (!branchInput || !branchDropdown) return;
-
-    const showDropdown = () => {
-      branchDropdown.classList.remove('hidden');
-      filterOptions();
-    };
-
-    const filterOptions = () => {
-      const val = branchInput.value.toLowerCase();
-      const options = Array.from(branchDropdown.querySelectorAll('.combobox-option'));
-      options.forEach(opt => {
-        const text = opt.textContent.toLowerCase();
-        const value = opt.getAttribute('data-value').toLowerCase();
-        if (text.includes(val) || value.includes(val)) {
-          opt.classList.remove('hidden');
-        } else {
-          opt.classList.add('hidden');
-        }
-      });
-    };
-
-    if (!branchInput.dataset.listenerInitialized) {
-      branchInput.dataset.listenerInitialized = 'true';
-
-      branchInput.addEventListener('focus', showDropdown);
-      branchInput.addEventListener('click', showDropdown);
-
-      document.addEventListener('mousedown', (e) => {
-        if (!branchInput.contains(e.target) && !branchDropdown.contains(e.target)) {
-          branchDropdown.classList.add('hidden');
-        }
-      });
-
-      branchInput.addEventListener('input', () => {
-        branchInput.value = branchInput.value.toUpperCase();
-        filterOptions();
-      });
-
-      enableComboboxKeyboardNavigation(branchInput, branchDropdown);
-
-      const branchClearBtn = document.getElementById('branchClearBtn');
-      if (branchClearBtn) {
-        enableComboboxClearButton(branchInput, branchDropdown, branchClearBtn);
-      }
-    }
-
-    const options = Array.from(branchDropdown.querySelectorAll('.combobox-option'));
-    options.forEach(opt => {
-      opt.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        
-        const val = opt.getAttribute('data-value');
-        branchInput.value = val;
-        branchDropdown.classList.add('hidden');
-        
-        branchInput.dispatchEvent(new Event('input'));
-        branchInput.dispatchEvent(new Event('change'));
-      });
+    setupCombobox({
+      input: branchInput,
+      dropdownId: 'branchDropdown',
+      clearBtnId: 'branchClearBtn',
+      normalize: str => str.toLowerCase(),
+      transformInput: str => str.toUpperCase(),
+      optionValue: opt => opt.getAttribute('data-value')
     });
   }
 
@@ -2350,7 +2157,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       const presets = JSON.parse(localStorage.getItem('rgpv_presets') || '[]');
-      
+
       const nameExists = presets.some(p => p.name.toLowerCase() === nickname.trim().toLowerCase());
       if (nameExists) {
         if (!confirm(`A preset named "${nickname.trim()}" already exists. Do you want to overwrite it?`)) {
@@ -2363,20 +2170,20 @@ document.addEventListener('DOMContentLoaded', () => {
       const parts = [];
       const courseText = courseSelect.value ? courseSelect.value.split(' (')[0] : '';
       if (courseText) parts.push(courseText);
-      
+
       const collegeCode = getCollegeCode();
-      if (collegeCode) parts.push('Clg ' + collegeCode);
-      
+      if (collegeCode) parts.push(`Clg ${collegeCode}`);
+
       const branchText = branchInput.value.trim();
       if (branchText) parts.push(branchText);
-      
+
       const semText = semesterInput.value.trim();
-      if (semText) parts.push('Sem ' + semText);
-      
+      if (semText) parts.push(`Sem ${semText}`);
+
       const summaryText = parts.join(' | ') || 'Custom Config';
 
       const newPreset = {
-        id: 'preset_' + Date.now(),
+        id: `preset_${Date.now()}`,
         name: nickname.trim(),
         timestamp: Date.now(),
         summary: summaryText,
@@ -2423,16 +2230,16 @@ document.addEventListener('DOMContentLoaded', () => {
       const parts = [];
       const courseText = courseSelect.value ? courseSelect.value.split(' (')[0] : '';
       if (courseText) parts.push(courseText);
-      
+
       const collegeCode = getCollegeCode();
-      if (collegeCode) parts.push('Clg ' + collegeCode);
-      
+      if (collegeCode) parts.push(`Clg ${collegeCode}`);
+
       const branchText = branchInput.value.trim();
       if (branchText) parts.push(branchText);
-      
+
       const semText = semesterInput.value.trim();
-      if (semText) parts.push('Sem ' + semText);
-      
+      if (semText) parts.push(`Sem ${semText}`);
+
       const summaryText = parts.join(' | ') || 'Custom Config';
 
       preset.timestamp = Date.now();
@@ -2483,7 +2290,7 @@ document.addEventListener('DOMContentLoaded', () => {
     presets.forEach(preset => {
       const row = document.createElement('div');
       row.className = 'preset-item';
-      
+
       const date = new Date(preset.timestamp);
       const timeStr = date.toLocaleString('en-IN', {
         day: '2-digit',
@@ -2630,6 +2437,35 @@ document.addEventListener('DOMContentLoaded', () => {
     return secs === 0 ? `${mins}m` : `${mins}m ${secs}s`;
   }
 
+  // Highlights the selected Performance Profile pill and repositions the slider under it
+  function setPillActive(val) {
+    let activeIdx = 0;
+    let activeBtn = null;
+    perfPillButtons.forEach((btn, idx) => {
+      if (btn.getAttribute('data-value') === val) {
+        btn.classList.add('active');
+        activeBtn = btn;
+        activeIdx = idx;
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+
+    const slider = document.querySelector('.perf-pill-slider');
+    if (slider && perfPillButtons.length > 0) {
+      if (activeBtn && activeBtn.offsetWidth > 0) {
+        const offsetLeft = activeBtn.offsetLeft;
+        const offsetWidth = activeBtn.offsetWidth;
+        slider.style.width = `${offsetWidth}px`;
+        slider.style.transform = `translateX(${offsetLeft - 3}px)`; // offset by 3px padding
+      } else {
+        const widthPercent = 100 / perfPillButtons.length;
+        slider.style.width = `calc(${widthPercent}% - 6px)`;
+        slider.style.transform = `translateX(calc(${activeIdx * 100}% + ${activeIdx * 4}px))`;
+      }
+    }
+  }
+
   // Applies the visual and parameter overrides for the selected Performance Profile
   function applyPerformanceProfile(profile) {
     if (profile === 'low') {
@@ -2637,7 +2473,6 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (profile === 'high') {
       document.body.classList.remove('performance-mode');
     } else {
-      // 'auto' mode: check if it was auto-downgraded by performance monitoring
       const autoDowngraded = localStorage.getItem('rgpv_perf_auto_downgraded') === 'true';
       if (autoDowngraded) {
         document.body.classList.add('performance-mode');
@@ -2763,7 +2598,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const toast = document.createElement('div');
     toast.id = 'perfToastContainer';
-    
+
     toast.style.cssText = `
       position: fixed;
       bottom: 24px;
@@ -2806,7 +2641,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.body.appendChild(toast);
 
-    toast.offsetHeight;
+    void toast.offsetHeight;
     toast.style.transform = 'translateY(0)';
     toast.style.opacity = '1';
 
@@ -2820,7 +2655,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     dismissBtn.addEventListener('click', dismissToast);
-    
+
     revertBtn.addEventListener('click', () => {
       localStorage.setItem('rgpv_perf_profile', 'high');
       localStorage.removeItem('rgpv_perf_auto_downgraded');
@@ -3018,12 +2853,10 @@ document.addEventListener('DOMContentLoaded', () => {
     drawParticles(isDark, eco) {
       const sizeFactor = (this.isMining ? this.activeSize : this.idleSize) / 100;
       const particleColor = isDark ? 'rgba(0, 240, 255, 0.65)' : 'rgba(37, 99, 235, 0.4)';
-      
-      // Decrease connection distance in Eco Mode to restrict comparison overhead
+
       const baseDistance = eco ? 70 : (this.isBlast ? 180 : 115);
       const connectionDistance = baseDistance * Math.sqrt(sizeFactor);
 
-      // Verify particle count aligns with current Eco setting
       const targetCount = eco ? 25 : this.maxParticles;
       if (this.particles.length !== targetCount) {
         if (this.particles.length > targetCount) {
@@ -3049,7 +2882,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const dx = p1.x - p2.x;
           const dy = p1.y - p2.y;
 
-          // Fast pruning check before expensive Math.sqrt calculation!
+          // Cheap bounding-box reject before the expensive Math.sqrt
           if (Math.abs(dx) > connectionDistance || Math.abs(dy) > connectionDistance) continue;
 
           const dist = Math.sqrt(dx * dx + dy * dy);
@@ -3079,7 +2912,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
       this.ctx.lineWidth = (this.isBlast ? 3.0 : 1.5) * Math.sqrt(sizeFactor);
 
-      // Reduce ring count in Eco Mode
       const numRings = eco ? (this.isBlast ? 4 : 2) : (this.isBlast ? 7 : 5);
       for (let i = 1; i <= numRings; i++) {
         const r = (maxRadius / numRings) * i;
@@ -3109,8 +2941,7 @@ document.addEventListener('DOMContentLoaded', () => {
     drawWaves(isDark, eco) {
       const sizeFactor = (this.isMining ? this.activeSize : this.idleSize) / 100;
       this.waveOffset += (this.isBlast ? 0.05 : 0.015) * this.speedMultiplier;
-      
-      // Reduce wave counts in Eco Mode
+
       const waveCount = eco ? (this.isBlast ? 3 : 1) : (this.isBlast ? 5 : 3);
 
       for (let w = 0; w < waveCount; w++) {
@@ -3124,7 +2955,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const amplitude = ((this.isBlast ? 75 : 30) + w * 15) * sizeFactor;
         const frequency = (0.0015 + w * 0.0005) / Math.sqrt(sizeFactor);
 
-        // Increase wave point step to 25px in Eco Mode to cut down trigonometric loop calculations
         const step = eco ? 25 : 10;
         for (let x = 0; x < this.canvas.width; x += step) {
           const y = (this.canvas.height * 0.5) +
@@ -3153,8 +2983,7 @@ document.addEventListener('DOMContentLoaded', () => {
         : `rgba(37, 99, 235, ${this.isBlast ? 0.32 : 0.12})`;
 
       const horizon = this.canvas.height * (this.isBlast ? 0.3 : 0.45);
-      
-      // Reduce horizontals grid counts in Eco Mode
+
       const linesCount = eco ? 10 : 20;
 
       for (let i = 0; i < linesCount; i++) {
@@ -3168,7 +2997,6 @@ document.addEventListener('DOMContentLoaded', () => {
         this.ctx.stroke();
       }
 
-      // Reduce vertical columns grid counts in Eco Mode
       const cols = eco ? 14 : 26;
       const centerX = this.canvas.width / 2;
       for (let i = -cols / 2; i <= cols / 2; i++) {
@@ -3217,11 +3045,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const ripple = document.createElement('div');
     ripple.className = 'theme-transition-ripple';
 
-    // Set dynamic target background color matching light/dark base themes
     ripple.style.setProperty('--target-bg', isDark ? '#050811' : '#e8eff7');
 
     document.body.appendChild(ripple);
-    ripple.offsetHeight;
+    void ripple.offsetHeight;
     ripple.classList.add('active');
 
     setTimeout(() => {

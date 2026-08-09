@@ -1,12 +1,19 @@
 ## TODOs
-- [UI] Add favicon.ico and NPM hook
-- [Library] Bump jimp and switch from uing xlsx to exceljs
+- [Library] Bump `jimp` and switch from uing `xlsx` to `exceljs`
 - [Library] Add worksheet and column styling functionality for Excel exports
-- [Bug] Cache retrieval is somewhat broken (could be npx specific)
-- [Bug] Status shows aborted even when successful
-- [Bug] Unable to select multiple branches anymore
-- [Bug] Branch code in exported file names is always ALL
-- [Feature] Add branch dropdown and map branch/subject codes to names
+- [CLI] Implement `branches` and `subjects` subcommands
+- [CLI] Add command to clear cache
+- [Data] Add branches for other courses
+- [Data] More granular selection: Selecting course would restrict colleges, semester, branches
+- [UI] Add `favicon.ico` and NPM hook
+- [UI] Add auto scrolling when scraping
+- [Feature] Add multi-branch support in branch dropdown
+- [Feature] Map branch/subject codes to names in result modals and exports
 - [Feature] Find mode: Search by individual name
 - [Feature] Watcher: Check if results are available for a list of courses or semesters
+- [Bug] Cache retrieval is somewhat broken (could be npx specific)
+- [Bug] Status shows aborted even when scraping is successful
+- [Bug] Unable to select multiple branches anymore
+- [Bug] Branch code in exported file names is always ALL
 - [Improvement] Handle situations of excessive traffic on RGPV
+- [Improvement] Responsiveness on mobile devices

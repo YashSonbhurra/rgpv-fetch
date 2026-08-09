@@ -123,11 +123,11 @@ export class RgpvFetch {
         const cached = JSON.parse(content);
         if (Date.now() - cached.timestamp < this.cacheDuration) {
           return cached.data;
-        } else {
-          fs.unlinkSync(file);
         }
+        fs.unlinkSync(file);
+
       }
-    } catch (err) {
+    } catch {
       // Fail silently
     }
     return null;
@@ -158,14 +158,12 @@ export class RgpvFetch {
       [ 0, -1,  0]
     ];
 
-    // Preprocessing pipeline: Greyscale -> Invert -> Sharpen -> Resize 2x
     image.greyscale()
-         .invert()
-         .convolute(sharpenKernel)
-         .resize(image.bitmap.width * 2, image.bitmap.height * 2);
+      .invert()
+      .convolute(sharpenKernel)
+      .resize(image.bitmap.width * 2, image.bitmap.height * 2);
 
-    // Apply custom threshold filter (128 threshold value)
-    image.scan(0, 0, image.bitmap.width, image.bitmap.height, function(x, y, idx) {
+    image.scan(0, 0, image.bitmap.width, image.bitmap.height, function applyThreshold(x, y, idx) {
       const red = this.bitmap.data[idx];
       const green = this.bitmap.data[idx + 1];
       const blue = this.bitmap.data[idx + 2];
@@ -255,10 +253,10 @@ export class RgpvFetch {
           continue;
         }
 
-        if (htmlText.includes('Result for this Enrollment No. not Found') || 
-            htmlText.includes('Enrollment No not Found') || 
+        if (htmlText.includes('Result for this Enrollment No. not Found') ||
+            htmlText.includes('Enrollment No not Found') ||
             htmlText.includes('Enrollment No. not Found')) {
-          
+
           systemAttempts++;
           if (systemAttempts >= this.maxRetries) {
             const result = { error: 'Enrollment No not Found', enrollId: canonicalEnrollId };
@@ -285,7 +283,7 @@ export class RgpvFetch {
         }
         systemAttempts++;
         if (systemAttempts >= this.maxRetries) {
-          throw new Error(`Scraping failed after ${this.maxRetries} system attempts. Last error: ${err.message}`);
+          throw new Error(`Scraping failed after ${this.maxRetries} system attempts. Last error: ${err.message}`, { cause: err });
         }
       }
     }
@@ -295,14 +293,14 @@ export class RgpvFetch {
   async getResult(enrollId, semester, courseId, resultType = 'main') {
     const canonicalEnrollId = enrollId.toUpperCase().trim();
     const semStr = String(semester);
-    
+
     const course = courses[String(courseId)];
     if (!course) {
       throw new Error(`Invalid courseId: ${courseId}. Available courseIds: ${Object.keys(courses).join(', ')}`);
     }
 
     const cacheKey = `${canonicalEnrollId}_${semStr}_${resultType}`;
-    
+
     const cachedData = this._getCache(cacheKey);
     if (cachedData) {
       return cachedData;
@@ -325,7 +323,7 @@ export class RgpvFetch {
         data
       };
       fs.writeFileSync(file, JSON.stringify(payload), 'utf8');
-    } catch (err) {
+    } catch {
       // Fail silently
     }
   }
@@ -371,7 +369,7 @@ export class RgpvFetch {
       result.format = 'non-grading';
       result.status = $('#ctl00_ContentPlaceHolder1_lblResult').text().trim().replace(/\s+/g, ' ');
       result.totalMarks = $('#ctl00_ContentPlaceHolder1_lblTotal').text().trim().replace(/\s+/g, ' ');
-      
+
       const rows = $('#ctl00_ContentPlaceHolder1_pnlNonGrading').find('tr');
       rows.each((i, tr) => {
         if (i === 0) return;
@@ -453,13 +451,13 @@ export class RgpvFetch {
       if (pref.isQueryOpenEnded) {
         continue;
       }
-      
+
       for (let seq = pref.startSeq; seq <= pref.maxSeq; seq++) {
         if (this.stopped) break;
         const enrollId = `${pref.prefix}${String(seq).padStart(3, '0')}`;
         const cacheKey = `${enrollId}_${semStr}_main`;
         const cachedData = this._getCache(cacheKey);
-        
+
         if (cachedData) {
           results[enrollId] = cachedData;
           completedCount++;
@@ -503,7 +501,7 @@ export class RgpvFetch {
       return sum;
     };
 
-    let stoppedAll = false;
+    const stoppedAll = false;
 
     const checkStopConditionForPrefix = (pref) => {
       let currentSeq = pref.startSeq;
@@ -536,7 +534,7 @@ export class RgpvFetch {
       if (stopSeq !== -1) {
         pref.stopTriggered = true;
         const firstFailureSeq = stopSeq - 4;
-        
+
         Object.keys(pref.finishedSeqs).forEach(keySeqStr => {
           const keySeq = parseInt(keySeqStr, 10);
           if (keySeq > firstFailureSeq) {
@@ -610,7 +608,7 @@ export class RgpvFetch {
         let task = null;
         for (const pref of Object.values(prefixConfig)) {
           if (pref.stopTriggered || this.stopped) continue;
-          
+
           let found = false;
           while (pref.nextSeq <= pref.maxSeq) {
             const seq = pref.nextSeq++;
@@ -637,7 +635,7 @@ export class RgpvFetch {
             results[enrollId] = cachedData;
             completedCount++;
             pref.finishedSeqs[seq] = { status: 'success', data: cachedData };
-            
+
             if (onProgress) {
               onProgress({
                 current: completedCount,
@@ -669,7 +667,7 @@ export class RgpvFetch {
           const pageUrl = await ensureClientSession();
           if (this.stopped) break;
           const data = await this._getResultWithClient(client, pageUrl, enrollId, semStr, courseId, cacheKey);
-          
+
           if (stoppedAll || pref.stopTriggered || this.stopped) break;
 
           results[enrollId] = data;
@@ -720,7 +718,7 @@ export class RgpvFetch {
 
     const activeTasksCount = Object.values(prefixConfig).reduce((sum, p) => sum + (p.maxSeq === Infinity ? 100 : (p.maxSeq - p.startSeq + 1)), 0);
     const spawnCount = Math.min(this.concurrency, activeTasksCount);
-    
+
     if (spawnCount > 0 && !this.stopped) {
       const workerPromises = Array.from({ length: spawnCount }, (_, i) => worker(i));
       await Promise.all(workerPromises);
@@ -743,11 +741,11 @@ export class RgpvFetch {
           if (rangeParts.length === 2 && prefixes.length > 0) {
             const latStart = parseInt(rangeParts[0].trim(), 10);
             const latEnd = parseInt(rangeParts[1].trim(), 10);
-            
+
             if (!isNaN(latStart) && !isNaN(latEnd)) {
               const minLat = Math.min(latStart, latEnd);
               const maxLat = Math.max(latStart, latEnd);
-              
+
               const lateralIds = [];
               for (const pref of prefixes) {
                 const lateralYear = String((pref.regYear + 1) % 100).padStart(2, '0');
@@ -756,12 +754,12 @@ export class RgpvFetch {
                   lateralIds.push(`${pref.clg}${pref.branch}${lateralYear}3D${seqStr}`);
                 }
               }
-              
+
               if (lateralIds.length > 0 && !this.stopped) {
                 let nextLatTaskIndex = 0;
                 const regularCompleted = completedCount;
                 const newTotal = regularCompleted + lateralIds.length;
-                
+
                 if (onProgress) {
                   onProgress({
                     current: regularCompleted,
@@ -771,7 +769,7 @@ export class RgpvFetch {
                     message: 'Starting lateral entries fetch...'
                   });
                 }
-                
+
                 const latWorker = async (workerId) => {
                   // Roulette Staggered Startup: start staggered apart to distribute resource consumption
                   if (workerId > 0 && !this.stopped && this.staggerDelay > 0) {
@@ -780,7 +778,7 @@ export class RgpvFetch {
                   if (this.stopped) return;
 
                   const client = clients[workerId] || clients[0];
-                  
+
                   const ensureClientSession = async () => {
                     const cIdStr = String(courseId);
                     if (currentCourseIds[workerId] === cIdStr && redirectUrls[workerId]) {
@@ -834,10 +832,10 @@ export class RgpvFetch {
                     if (taskIndex >= lateralIds.length || this.stopped) {
                       break;
                     }
-                    
+
                     const enrollId = lateralIds[taskIndex];
                     const cacheKey = `${enrollId}_${semStr}_main`;
-                    
+
                     const cachedData = this._getCache(cacheKey);
                     if (cachedData) {
                       results[enrollId] = cachedData;
@@ -854,7 +852,7 @@ export class RgpvFetch {
                       }
                       continue;
                     }
-                    
+
                     try {
                       if (onProgress) {
                         onProgress({
@@ -865,15 +863,15 @@ export class RgpvFetch {
                           message: `Scraping lateral result for ${enrollId}`
                         });
                       }
-                      
+
                       const pageUrl = await ensureClientSession();
                       if (this.stopped) break;
                       const data = await this._getResultWithClient(client, pageUrl, enrollId, semStr, courseId, cacheKey);
-                      
+
                       if (this.stopped) break;
                       results[enrollId] = data;
                       completedCount++;
-                      
+
                       const isError = !!data.error;
                       if (onProgress) {
                         onProgress({
@@ -904,7 +902,7 @@ export class RgpvFetch {
                     }
                   }
                 };
-                
+
                 const spawnCountLat = Math.min(this.concurrency, lateralIds.length);
                 const workerPromisesLat = Array.from({ length: spawnCountLat }, (_, i) => latWorker(i));
                 await Promise.all(workerPromisesLat);
@@ -912,7 +910,7 @@ export class RgpvFetch {
             }
           }
         } catch (latErr) {
-          console.error("Error in lateral entries pass:", latErr.message);
+          console.error('Error in lateral entries pass:', latErr.message);
         }
       }
     }

@@ -12,6 +12,10 @@
     "README.md",
     "LICENSE"
   ],
+  "scripts": {
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
+  },
   "keywords": [
     "rgpv",
     "lnct",
@@ -35,6 +39,14 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@eslint/css": "^1.4.0",
+    "@eslint/js": "^10.0.1",
+    "@html-eslint/eslint-plugin": "^0.64.0",
+    "@html-eslint/parser": "^0.64.0",
+    "@stylistic/eslint-plugin": "^5.10.0",
+    "eslint": "^10.8.1",
+    "eslint-plugin-jsonc": "^3.4.1",
+    "globals": "^17.9.0",
     "pdf-parse": "^2.4.5"
   }
 }

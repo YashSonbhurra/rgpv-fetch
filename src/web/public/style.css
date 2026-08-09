@@ -25,12 +25,9 @@
   --btn-danger-hover: #dc2626;
   --accent-focus-ring: rgba(37, 99, 235, 0.15);
   
-  --glow-1: rgba(37, 99, 235, 0.04);
-  --glow-2: rgba(14, 165, 233, 0.03);
   
   --neon-green: #10b981;
   --neon-red: #ef4444;
-  --neon-cyan: #1d4ed8;
 
   --badge-pass-bg: #ecfdf5;
   --badge-pass-text: #047857;
@@ -67,12 +64,9 @@ body.dark-theme {
   --btn-danger-hover: #f87171;
   --accent-focus-ring: rgba(0, 240, 255, 0.25);
   
-  --glow-1: rgba(0, 240, 255, 0.05);
-  --glow-2: rgba(217, 70, 239, 0.04);
   
   --neon-green: #34d399;
   --neon-red: #f87171;
-  --neon-cyan: #00f0ff;
 
   --badge-pass-bg: rgba(16, 185, 129, 0.12);
   --badge-pass-text: #34d399;
@@ -321,12 +315,6 @@ body.dark-theme .glass:hover {
 }
 
 /* Forms & Controls Components */
-.scrape-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
-
 .form-group {
   display: flex;
   flex-direction: column;
@@ -423,18 +411,7 @@ body.dark-theme .accordion-trigger {
 
 body.dark-theme .accordion-trigger:hover {
   color: var(--accent-primary);
-}
-
-.accordion-trigger .arrow {
-  transition: transform 0.3s ease;
-  font-size: 0.6rem;
-}
-
-.accordion-trigger.active .arrow {
-  transform: rotate(180deg);
-}
-
-.accordion-content {
+}.accordion-content {
   max-height: 0;
   overflow: hidden;
   transition: max-height 0.3s cubic-bezier(0, 1, 0, 1);
@@ -444,26 +421,6 @@ body.dark-theme .accordion-trigger:hover {
   max-height: 350px;
   margin-top: 0.5rem;
   overflow: visible;
-}
-
-.checkbox-group {
-  flex-direction: row;
-  align-items: center;
-  gap: 0.6rem;
-  cursor: pointer;
-  user-select: none;
-}
-
-.checkbox-group input {
-  width: 18px;
-  height: 18px;
-  cursor: pointer;
-  accent-color: var(--accent-primary);
-}
-
-.checkbox-group label {
-  margin-bottom: 0;
-  cursor: pointer;
 }
 
 /* Button UI Components */
@@ -702,85 +659,7 @@ body.dark-theme .accordion-trigger:hover {
   font-size: 0.85rem;
   color: var(--text-muted);
   font-weight: 500;
-}
-
-.btn-export {
-  background: var(--bg-secondary);
-  border: 1px solid var(--card-border);
-  color: var(--text-main);
-  padding: 0.55rem 1.2rem;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 0.85rem;
-  font-weight: 600;
-  transition: all 0.2s ease;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.btn-export:hover:not(:disabled) {
-  background: var(--bg-primary);
-  border-color: var(--text-muted);
-  color: var(--text-main);
-}
-
-.btn-export:active:not(:disabled) {
-  transform: scale(0.98);
-}
-
-.btn-export:disabled {
-  background: var(--bg-primary) !important;
-  border: 1px solid var(--card-border) !important;
-  color: var(--text-muted) !important;
-  box-shadow: none !important;
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.export-dropdown-container {
-  position: relative;
-}
-
-.dropdown-menu {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 5px);
-  background: var(--bg-secondary);
-  border: 1px solid var(--card-border);
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  display: none;
-  z-index: 10;
-  width: 200px;
-}
-
-.dropdown-menu.active {
-  display: block;
-  animation: slide-up 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.dropdown-item {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  width: 100%;
-  padding: 0.7rem 1rem;
-  border: none;
-  background: none;
-  color: var(--text-main);
-  font-size: 0.82rem;
-  text-align: left;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.dropdown-item:hover {
-  background: var(--bg-primary);
-}
-
-.table-container {
+}.table-container {
   width: 100%;
   overflow-x: auto;
   border-radius: 8px;
@@ -1033,21 +912,7 @@ tr.failed-scrape-row td {
   font-size: 0.7rem;
   font-weight: 700;
   color: var(--text-main);
-}
-
-.card-header-toggle {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-  margin-bottom: 0.5rem;
-}
-
-.card-header-toggle h3 {
-  margin-bottom: 0 !important;
-}
-
-.toggle-group {
+}.toggle-group {
   display: flex;
   background: var(--toggle-bg);
   border: 1px solid var(--card-border);
@@ -1084,44 +949,6 @@ body.dark-theme .toggle-btn.active {
   border: 1px solid rgba(0, 240, 255, 0.35) !important;
   box-shadow: 0 0 8px rgba(0, 240, 255, 0.2) !important;
 }
-
-.toppers-card {
-  align-items: flex-start;
-}
-
-.mini-table {
-  width: 100%;
-}
-
-.mini-table table {
-  background: none;
-}
-
-.mini-table th {
-  background: none;
-  padding-left: 0.5rem;
-}
-
-.mini-table td {
-  padding: 0.65rem 0.5rem;
-}
-
-.rank-badge {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.75rem;
-  font-weight: 800;
-  color: var(--text-main);
-  background: var(--card-border);
-}
-
-.rank-badge.rank-1 { background: #ffd700; color: black; }
-.rank-badge.rank-2 { background: #c0c0c0; color: black; }
-.rank-badge.rank-3 { background: #cd7f32; color: black; }
 
 /* Footer Elements */
 footer {
@@ -1209,11 +1036,6 @@ footer p {
   100% { box-shadow: 0 0 0 0 rgba(43, 108, 176, 0); }
 }
 
-@keyframes slide-up {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
 /* Responsive Overrides */
 @media (max-width: 1024px) {
   .dashboard-grid {
@@ -1252,7 +1074,6 @@ footer p {
   background: var(--bg-secondary);
   border: 1px solid var(--card-border);
   border-radius: 20px;
-  box-shadow: var(--shadow-lg);
   display: flex;
   flex-direction: column;
   max-height: 90vh;
@@ -1285,16 +1106,7 @@ footer p {
   margin: 0;
   font-weight: 800;
   letter-spacing: 0.5px;
-}
-
-.header-title-container .subtitle {
-  font-size: 0.72rem;
-  color: var(--text-muted);
-  margin: 0.1rem 0 0 0;
-  font-weight: 500;
-}
-
-.close-btn {
+}.close-btn {
   background: none;
   border: none;
   font-size: 1.8rem;
@@ -1447,7 +1259,7 @@ footer p {
     width: 100% !important;
     background: white !important;
   }
-  .modal-footer, .close-btn {
+  .close-btn {
     display: none !important;
   }
   .marksheet-header-info, .marksheet-summary {
@@ -2172,7 +1984,7 @@ body.dark-theme .perf-pill-toggle {
   align-items: center;
   justify-content: center;
   gap: 4px;
-  z-index: 2; /* Sits above the slider */
+  z-index: 2;
   white-space: nowrap;
 }
 
@@ -2202,9 +2014,9 @@ body.dark-theme .perf-pill-btn.active {
   left: 3px;
   border-radius: 17px;
   background: var(--accent-glow);
-  z-index: 1; /* Sits below buttons */
+  z-index: 1;
   box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
-  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), width 0.35s ease; /* Bouncy gel/liquid effect! */
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), width 0.35s ease;
   pointer-events: none;
 }
 
@@ -2249,11 +2061,11 @@ input[type="checkbox"].preserve-check::before {
   transition: border-color 0.15s ease !important;
 }
 input[type="checkbox"].preserve-check:checked {
-  background: #84cc16 !important; /* Green accent */
+  background: #84cc16 !important;
   border-color: #84cc16 !important;
 }
 input[type="checkbox"].preserve-check:checked::before {
-  border-color: #ffffff !important; /* Crisp white checkmark */
+  border-color: #ffffff !important;
 }
 
 /* Searchable Combobox Component */
@@ -2320,7 +2132,7 @@ body.dark-theme .combobox-option.highlighted {
   transform: translateY(-50%) !important;
   background: none !important;
   border: none !important;
-  color: #ef4444 !important; /* Red color */
+  color: #ef4444 !important;
   font-size: 22px !important;
   font-weight: bold !important;
   cursor: pointer !important;
@@ -2343,7 +2155,7 @@ body.dark-theme .combobox-option.highlighted {
 }
 
 body.dark-theme .combobox-clear-btn {
-  color: #f87171 !important; /* Lighter red for contrast in dark theme */
+  color: #f87171 !important;
 }
 
 body.dark-theme .combobox-clear-btn:hover {
@@ -2359,7 +2171,7 @@ body.dark-theme .combobox-clear-btn:hover {
   background: #e9e3ff !important;
   color: #6d28d9 !important;
   border: 1px solid #dcd4ff !important;
-  border-radius: 999px !important; /* Pill shape! */
+  border-radius: 999px !important;
   font-weight: 600 !important;
   font-size: 0.75rem !important;
   height: 32px !important;
@@ -2397,12 +2209,6 @@ body.dark-theme .preset-btn:hover {
 }
 
 /* Redesigned Preset List Card Layout */
-.presets-list-card {
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-}
-
 .preset-item {
   display: flex !important;
   align-items: center !important;
@@ -2421,7 +2227,7 @@ body.dark-theme .preset-btn:hover {
 }
 
 .preset-item:hover {
-  background: rgba(245, 158, 11, 0.04) !important; /* Soft warm amber highlight */
+  background: rgba(245, 158, 11, 0.04) !important;
   border-color: rgba(245, 158, 11, 0.3) !important;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);

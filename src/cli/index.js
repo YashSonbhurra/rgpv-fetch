@@ -38,7 +38,7 @@ function parseRollRange(input) {
       const rangeParts = part.split('-');
       if (rangeParts.length === 2) {
         const startStr = rangeParts[0].trim().toUpperCase();
-        let endStr = rangeParts[1].trim().toUpperCase();
+        const endStr = rangeParts[1].trim().toUpperCase();
 
         if (startStr.length !== 12 || !startStr.match(/^[A-Z0-9]{8}\d{4}$/)) {
           throw new Error(`Invalid starting roll number: ${startStr}. Expected a 12-character RGPV enrollment ID.`);
@@ -142,7 +142,7 @@ function prepareTableData(resultsArray, courseId, semester) {
       Branch: branch,
       Status: res.status || '',
       SGPA: res.sgpa || '',
-      CGPA: res.cgpa || '',
+      CGPA: res.cgpa || ''
     };
 
     subjectHeaders.forEach(hdr => {
@@ -199,10 +199,10 @@ function convertToCSV(headers, successfulRows, failedRows) {
 function writeToExcel(headers, successfulRows, failedRows, outPath) {
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.json_to_sheet(successfulRows, { header: headers });
-  
+
   if (failedRows.length > 0) {
     const startRow = successfulRows.length + 3;
-    
+
     XLSX.utils.sheet_add_aoa(ws, [
       ['FAILED SCRAPES'],
       ['EnrollId', 'Error']
@@ -212,7 +212,7 @@ function writeToExcel(headers, successfulRows, failedRows, outPath) {
     XLSX.utils.sheet_add_aoa(ws, failedAOA, { origin: `A${startRow + 2}` });
   }
 
-  XLSX.utils.book_append_sheet(wb, ws, "Student Results");
+  XLSX.utils.book_append_sheet(wb, ws, 'Student Results');
   XLSX.writeFile(wb, outPath);
 }
 
@@ -300,14 +300,14 @@ program
     const courseId = String(options.course);
     const semester = parseInt(options.sem, 10);
     const rollInput = options.roll;
-    
+
     if (!courses[courseId]) {
       console.error(`Error: Invalid course ID "${courseId}". Run "rgpv-fetch courses" to see valid options.`);
       process.exit(1);
     }
 
     if (isNaN(semester)) {
-      console.error(`Error: Semester must be a numeric value.`);
+      console.error('Error: Semester must be a numeric value.');
       process.exit(1);
     }
 
@@ -340,7 +340,7 @@ program
       outPath = path.resolve(`./RGPV_${clgCode}_Sem${semester}_${branchCode}.xlsx`);
     }
 
-    console.log(`Starting scrape job:`);
+    console.log('Starting scrape job:');
     console.log(`- Course      : ${courses[courseId].name} (${courseId})`);
     console.log(`- Semester    : ${semester}`);
     const hasOpenEnded = enrollIds.some(id => id.endsWith('-'));
@@ -350,7 +350,7 @@ program
     console.log(`- Delay       : ${options.delay} ms`);
     console.log(`- Retries     : ${options.retries}`);
     console.log(`- Output File : ${outPath}`);
-    console.log(`\nInitializing worker...`);
+    console.log('\nInitializing worker...');
 
     const scraper = new RgpvFetch({
       maxRetries: parseInt(options.retries, 10),
@@ -412,7 +412,7 @@ program
       console.log(`\nSuccess: Exported ${resultsArray.length} items in ${formatDuration(parseFloat(durationS))}.`);
       console.log(`- Succeeded: ${successful}`);
       console.log(`- Failed   : ${failed}`);
-      console.log(`Done!`);
+      console.log('Done!');
 
     } catch (err) {
       progressBar.stop();
@@ -455,7 +455,7 @@ program
     sortedColleges.forEach(([code, c]) => {
       const name = c.name || '';
       const city = c.city || '';
-      
+
       const matchesSearch = !search || name.toLowerCase().includes(search) || city.toLowerCase().includes(search);
       const matchesCity = !cityFilter || city.toLowerCase().includes(cityFilter);
 
@@ -491,7 +491,7 @@ program
     import('../web/server.js').then(() => {
       console.log('Opening dashboard in browser...');
       const startCommand = process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'start' : 'xdg-open';
-      exec(`${startCommand} ${url}`, (err) => {
+      exec(`${startCommand} ${url}`, () => {
         // Silent catch
       });
     });

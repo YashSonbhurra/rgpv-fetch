@@ -24,7 +24,7 @@ try {
   if (fs.existsSync(collegesPath)) {
     colleges = JSON.parse(fs.readFileSync(collegesPath, 'utf8'));
   }
-} catch (err) {
+} catch {
   // Silent fallback
 }
 
@@ -51,7 +51,7 @@ function broadcastEvent(type, data) {
   sseClients.forEach(client => {
     try {
       client.res.write(payload);
-    } catch (err) {
+    } catch {
       // Ignore broken connections
     }
   });
@@ -70,7 +70,7 @@ app.get('/api/branches', (req, res) => {
     const branchesPath = path.resolve(__dirname, '../lib/branches.json');
     const branches = JSON.parse(fs.readFileSync(branchesPath, 'utf8'));
     res.json(branches);
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: 'Failed to load branches' });
   }
 });
@@ -101,7 +101,7 @@ app.get('/api/scrape/stream', (req, res) => {
 
 // POST endpoint to trigger bulk scraping job in background
 let activeScraperInstance = null;
-app.post('/api/scrape/start', async (req, res) => {
+app.post('/api/scrape/start', (req, res) => {
   if (activeJob.status === 'scraping') {
     return res.status(400).json({ error: 'A scraping job is already active.' });
   }
@@ -120,11 +120,11 @@ app.post('/api/scrape/start', async (req, res) => {
     courseId: courseId,
     duration: null
   };
-  broadcastEvent('state', { 
-    status: activeJob.status, 
-    progress: activeJob.progress, 
-    semester: activeJob.semester, 
-    courseId: activeJob.courseId 
+  broadcastEvent('state', {
+    status: activeJob.status,
+    progress: activeJob.progress,
+    semester: activeJob.semester,
+    courseId: activeJob.courseId
   });
 
   res.json({ message: 'Scraper job successfully started' });
@@ -173,7 +173,7 @@ app.post('/api/scrape/start', async (req, res) => {
         activeJob.progress.status = 'completed';
         broadcastEvent('state', { status: activeJob.status, progress: activeJob.progress, results: activeJob.results, semester: activeJob.semester, courseId: activeJob.courseId, duration: activeJob.duration });
       }
-    } catch (err) {
+    } catch {
       activeJob.status = 'failed';
       activeJob.duration = parseFloat(((Date.now() - startTime) / 1000).toFixed(1));
       broadcastEvent('state', { status: activeJob.status, progress: activeJob.progress, semester: activeJob.semester, courseId: activeJob.courseId, duration: activeJob.duration });
@@ -192,7 +192,7 @@ app.post('/api/scrape/stop', async (req, res) => {
   if (activeScraperInstance) {
     try {
       await activeScraperInstance.close();
-    } catch (err) {
+    } catch {
       // Ignore
     }
   }
@@ -263,7 +263,7 @@ app.get('/api/scrape/export', (req, res) => {
   const { headers, successfulRows, failedRows } = prepareTableDataForServer(filteredResults, courseId, semester);
 
   let clgCode = 'ALL';
-  let branchCode = branch.toUpperCase();
+  const branchCode = branch.toUpperCase();
   if (filteredResults.length > 0) {
     const sampleEnroll = filteredResults[0].enrollId;
     if (sampleEnroll && sampleEnroll.length >= 4) {
@@ -293,18 +293,18 @@ app.get('/api/scrape/export', (req, res) => {
       XLSX.utils.sheet_add_aoa(ws, failedAOA, { origin: `A${startRow + 2}` });
     }
 
-    XLSX.utils.book_append_sheet(wb, ws, "Student Results");
+    XLSX.utils.book_append_sheet(wb, ws, 'Student Results');
     const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename="${baseFilename}.xlsx"`);
     return res.send(buffer);
-  } else {
-    res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', `attachment; filename="${baseFilename}.json"`);
-    const formattedJSON = formatJSONResults(filteredResults, courseId, semester);
-    return res.json(formattedJSON);
   }
+  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Content-Disposition', `attachment; filename="${baseFilename}.json"`);
+  const formattedJSON = formatJSONResults(filteredResults, courseId, semester);
+  return res.json(formattedJSON);
+
 });
 
 const PORT = process.env.PORT || 3000;
@@ -324,7 +324,7 @@ function parseRollRangeForServer(input) {
       const rangeParts = part.split('-');
       if (rangeParts.length === 2) {
         const startStr = rangeParts[0].trim().toUpperCase();
-        let endStr = rangeParts[1].trim().toUpperCase();
+        const endStr = rangeParts[1].trim().toUpperCase();
 
         if (startStr.length !== 12 || !startStr.match(/^[A-Z0-9]{8}\d{4}$/)) {
           throw new Error(`Invalid starting roll number: ${startStr}. Expected a 12-character RGPV ID.`);
@@ -483,7 +483,7 @@ function prepareTableDataForServer(resultsArray, courseId, semester) {
       Branch: branch,
       Status: res.status || '',
       SGPA: res.sgpa || '',
-      CGPA: res.cgpa || '',
+      CGPA: res.cgpa || ''
     };
 
     subjectHeaders.forEach(hdr => {
