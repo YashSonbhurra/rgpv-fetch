@@ -12,7 +12,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const coursesPath = path.resolve(__dirname, 'courses.json');
+const coursesPath = path.resolve(__dirname, '../data/courses.json');
 const courses = JSON.parse(fs.readFileSync(coursesPath, 'utf8'));
 
 const BASE_URL = 'http://result.rgpv.ac.in';

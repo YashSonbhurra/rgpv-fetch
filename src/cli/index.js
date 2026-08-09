@@ -12,10 +12,10 @@ import { exec } from 'child_process';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const coursesPath = path.resolve(__dirname, '../lib/courses.json');
+const coursesPath = path.resolve(__dirname, '../data/courses.json');
 const courses = JSON.parse(fs.readFileSync(coursesPath, 'utf8'));
 
-const collegesPath = path.resolve(__dirname, '../lib/colleges.json');
+const collegesPath = path.resolve(__dirname, '../data/colleges.json');
 const colleges = JSON.parse(fs.readFileSync(collegesPath, 'utf8'));
 
 const program = new Command();

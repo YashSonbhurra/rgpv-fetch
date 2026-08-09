@@ -44,11 +44,12 @@ rgpv-fetch/
 └── src/
     ├── cli/
     │   └── index.js       # CLI entrypoint (Commander.js commands & exports setup)
-    ├── lib/
+    ├── data/
     │   ├── branches.json  # Mapping of branch codes
     │   ├── colleges.json  # Mapping of college codes
     │   ├── courses.json   # Mapping of course codes
-    │   ├── subjects.json  # Mapping of subject codes
+    │   └── subjects.json  # Mapping of subject codes
+    ├── lib/
     │   ├── index.js       # Main exports for importing as library
     │   └── scraper.js     # Core scraper engines, captcha preprocessing, and HTML parsers
     └── web/

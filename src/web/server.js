@@ -15,12 +15,12 @@ app.use(express.json());
 const publicDir = path.resolve(__dirname, 'public');
 app.use(express.static(publicDir));
 
-const coursesPath = path.resolve(__dirname, '../lib/courses.json');
+const coursesPath = path.resolve(__dirname, '../data/courses.json');
 const courses = JSON.parse(fs.readFileSync(coursesPath, 'utf8'));
 
 let colleges = {};
 try {
-  const collegesPath = path.resolve(__dirname, '../lib/colleges.json');
+  const collegesPath = path.resolve(__dirname, '../data/colleges.json');
   if (fs.existsSync(collegesPath)) {
     colleges = JSON.parse(fs.readFileSync(collegesPath, 'utf8'));
   }
@@ -67,7 +67,7 @@ app.get('/api/colleges', (req, res) => {
 
 app.get('/api/branches', (req, res) => {
   try {
-    const branchesPath = path.resolve(__dirname, '../lib/branches.json');
+    const branchesPath = path.resolve(__dirname, '../data/branches.json');
     const branches = JSON.parse(fs.readFileSync(branchesPath, 'utf8'));
     res.json(branches);
   } catch {

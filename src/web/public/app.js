@@ -1958,6 +1958,7 @@ document.addEventListener('DOMContentLoaded', () => {
       inputEl.value = '';
       inputEl.dispatchEvent(new Event('input'));
       inputEl.dispatchEvent(new Event('change'));
+      dropdownEl.classList.remove('hidden');
       clearBtnEl.classList.add('hidden');
       inputEl.focus();
     });
@@ -2016,7 +2017,6 @@ document.addEventListener('DOMContentLoaded', () => {
       activeIndex = -1;
       clearHighlight();
     });
-
     inputEl.addEventListener('focus', () => {
       activeIndex = -1;
       clearHighlight();
@@ -2048,12 +2048,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!input.dataset.listenerInitialized) {
       input.dataset.listenerInitialized = 'true';
+      const clearBtn = document.getElementById(clearBtnId);
 
       input.addEventListener('focus', showDropdown);
       input.addEventListener('click', showDropdown);
 
       document.addEventListener('mousedown', (e) => {
-        if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+        const insideCombobox = input.contains(e.target) || dropdown.contains(e.target)
+          || (clearBtn && clearBtn.contains(e.target));
+        if (!insideCombobox) {
           dropdown.classList.add('hidden');
         }
       });
@@ -2065,7 +2068,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
       enableComboboxKeyboardNavigation(input, dropdown);
 
-      const clearBtn = document.getElementById(clearBtnId);
       if (clearBtn) {
         enableComboboxClearButton(input, dropdown, clearBtn);
       }
@@ -2308,7 +2310,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
         <div style="display: flex; align-items: center; gap: 0.5rem; margin-left: 0.5rem; flex-shrink: 0;">
           <button class="preset-card-btn edit-preset-btn" title="Rename Preset">Edit</button>
-          <button class="preset-card-btn delete-preset-btn" style="background: rgba(239, 68, 68, 0.08) !important; border-color: rgba(239, 68, 68, 0.2) !important; color: #ef4444 !important;" title="Delete Preset">Delete</button>
+          <button class="preset-card-btn delete-preset-btn" title="Delete Preset">Delete</button>
         </div>
       `;
 
