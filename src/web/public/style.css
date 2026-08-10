@@ -630,6 +630,41 @@ body.dark-theme .accordion-trigger:hover {
   background-color: var(--accent-primary);
 }
 
+/* Branch filter select sitting in the tabs header */
+.branch-filter-wrapper {
+  width: 140px;
+  margin-bottom: 0;
+}
+
+.branch-filter-wrapper select {
+  width: 100%;
+  height: 34px;
+  padding: 0.35rem 1.5rem 0.35rem 0.5rem;
+  font-family: inherit;
+  font-size: 0.8rem;
+  background: var(--bg-secondary);
+  color: var(--text-main);
+  border: 1px solid var(--card-border);
+  border-radius: 6px;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.branch-filter-wrapper select:hover {
+  border-color: var(--accent-primary);
+}
+
+.branch-filter-wrapper select:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px var(--accent-focus-ring);
+}
+
+.branch-filter-wrapper select option {
+  background: var(--bg-secondary);
+  color: var(--text-main);
+}
+
 .tab-content {
   display: none;
 }
@@ -1700,6 +1735,32 @@ main.container.mining-active:hover {
 }
 
 /* Custom switch slider toggle buttons */
+.switch-toggle {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.switch-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.switch-toggle .slider-toggle-btn {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  cursor: pointer;
+  background-color: var(--card-border);
+  border-radius: 20px;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
 .switch-toggle input:checked + .slider-toggle-btn {
   background-color: var(--accent-primary);
   box-shadow: 0 0 8px var(--accent-focus-ring);
@@ -2115,6 +2176,18 @@ input[type="checkbox"].preserve-check:checked::before {
 body.dark-theme .combobox-option:hover,
 body.dark-theme .combobox-option.highlighted {
   background: rgba(0, 240, 255, 0.06);
+  color: var(--accent-secondary);
+}
+
+/* Multi-select combobox: mark codes already present in the input */
+.combobox-option.selected {
+  background: rgba(37, 99, 235, 0.14);
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+body.dark-theme .combobox-option.selected {
+  background: rgba(0, 240, 255, 0.12);
   color: var(--accent-secondary);
 }
 

@@ -56,11 +56,16 @@ export class RgpvFetch {
 
   // Closes Tesseract OCR worker and cleans up resources
   async close() {
-    this.stopped = true;
     if (this.worker) {
       await this.worker.terminate();
       this.worker = null;
     }
+  }
+
+  // Cancels any in-flight scraping and releases resources
+  async abort() {
+    this.stopped = true;
+    await this.close();
   }
 
   // Ensures session is initialized and selected for a specific course ID
@@ -447,6 +452,21 @@ export class RgpvFetch {
 
     let completedCount = 0;
 
+    const hasOpenEnded = Object.values(prefixConfig).some(p => p.isQueryOpenEnded);
+
+    // Calculates current active/estimated total matching sequence config
+    const getProgressTotal = () => {
+      let sum = 0;
+      Object.values(prefixConfig).forEach(p => {
+        if (p.maxSeq === Infinity) {
+          sum += Math.max(completedCount + 20, 100);
+        } else {
+          sum += (p.maxSeq - p.startSeq + 1);
+        }
+      });
+      return sum;
+    };
+
     for (const pref of Object.values(prefixConfig)) {
       if (pref.isQueryOpenEnded) {
         continue;
@@ -462,6 +482,18 @@ export class RgpvFetch {
           results[enrollId] = cachedData;
           completedCount++;
           pref.finishedSeqs[seq] = { status: 'success', data: cachedData };
+
+          if (onProgress) {
+            onProgress({
+              current: completedCount,
+              total: getProgressTotal(),
+              isOpenEnded: hasOpenEnded,
+              enrollId,
+              status: 'success',
+              data: cachedData,
+              message: `Successfully loaded from cache: ${enrollId}`
+            });
+          }
         }
       }
     }
@@ -486,20 +518,6 @@ export class RgpvFetch {
 
     const redirectUrls = Array.from({ length: this.concurrency }, () => null);
     const currentCourseIds = Array.from({ length: this.concurrency }, () => null);
-    const hasOpenEnded = Object.values(prefixConfig).some(p => p.isQueryOpenEnded);
-
-    // Calculates current active/estimated total matching sequence config
-    const getProgressTotal = () => {
-      let sum = 0;
-      Object.values(prefixConfig).forEach(p => {
-        if (p.maxSeq === Infinity) {
-          sum += Math.max(completedCount + 20, 100);
-        } else {
-          sum += (p.maxSeq - p.startSeq + 1);
-        }
-      });
-      return sum;
-    };
 
     const stoppedAll = false;
 

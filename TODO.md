@@ -11,9 +11,5 @@
 - [Feature] Map branch/subject codes to names in result modals and exports
 - [Feature] Find mode: Search by individual name
 - [Feature] Watcher: Check if results are available for a list of courses or semesters
-- [Bug] Cache retrieval is somewhat broken (could be npx specific)
-- [Bug] Status shows aborted even when scraping is successful
-- [Bug] Unable to select multiple branches anymore
-- [Bug] Branch code in exported file names is always ALL
 - [Improvement] Handle situations of excessive traffic on RGPV
 - [Improvement] Responsiveness on mobile devices

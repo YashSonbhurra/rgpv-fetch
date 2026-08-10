@@ -81,6 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const tallyPassedCount = document.getElementById('tallyPassedCount');
   const tallyGraceCount = document.getElementById('tallyGraceCount');
   const tallyFailedCount = document.getElementById('tallyFailedCount');
+  const tallyNotFoundCount = document.getElementById('tallyNotFoundCount');
 
   const reportCardModal = document.getElementById('reportCardModal');
   const closeModalBtn = document.getElementById('closeModalBtn');
@@ -124,17 +125,26 @@ document.addEventListener('DOMContentLoaded', () => {
   const sfxFahh = new Audio('sfx/funmode_fahh.mp3');
   const sfxBye = new Audio('sfx/funmode_bye_have_a_great_time.mp3');
 
-  // Global document interaction listener to unlock all Audio objects for autoplay
+  // Global document interaction listener to silently unlock all Audio objects for autoplay,
+  // leaving alone any clip the same interaction legitimately started
   function unlockAudioContexts() {
     const audios = [sfxConfirm, sfxSuccess, sfxCook, sfxFahh, sfxBye];
     const unlock = () => {
       audios.forEach(audio => {
+        if (!audio.paused) return;
+
+        const restoreVolume = audio.volume;
+        audio.volume = 0;
         audio.play()
           .then(() => {
+            if (audio.volume !== 0) return;
             audio.pause();
             audio.currentTime = 0;
+            audio.volume = restoreVolume;
           })
-          .catch(() => { });
+          .catch(() => {
+            audio.volume = restoreVolume;
+          });
       });
       document.removeEventListener('click', unlock);
       document.removeEventListener('keydown', unlock);
@@ -147,7 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
   unlockAudioContexts();
 
   function playSFX(audio) {
-    const enabled = localStorage.getItem('rgpv_fetch_sfx_enabled') !== 'false';
+    const enabled = localStorage.getItem('rgpv_fetch_sfx_enabled') === 'true';
     const vol = parseFloat(localStorage.getItem('rgpv_fetch_sfx_volume') ?? '70') / 100;
     if (!enabled) return;
     audio.volume = vol;
@@ -746,6 +756,7 @@ document.addEventListener('DOMContentLoaded', () => {
             tallyPassedCount.textContent = '0';
             tallyGraceCount.textContent = '0';
             tallyFailedCount.textContent = '0';
+            tallyNotFoundCount.textContent = '0';
 
             alert('Dashboard styles, settings, and scraper states have been successfully reset.');
           } else {
@@ -774,7 +785,7 @@ document.addEventListener('DOMContentLoaded', () => {
         sfxBye.volume = vol;
       };
 
-      const sfxEnabled = localStorage.getItem('rgpv_fetch_sfx_enabled') !== 'false';
+      const sfxEnabled = localStorage.getItem('rgpv_fetch_sfx_enabled') === 'true';
       sfxToggle.checked = sfxEnabled;
       if (sfxEnabled) {
         sfxVolumeContainer.classList.remove('hidden');
@@ -990,18 +1001,7 @@ document.addEventListener('DOMContentLoaded', () => {
       dropdown.appendChild(option);
     });
 
-    const options = Array.from(dropdown.querySelectorAll('.combobox-option'));
-    options.forEach(opt => {
-      opt.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        const val = opt.getAttribute('data-value');
-        branchInput.value = val;
-        dropdown.classList.add('hidden');
-        branchInput.dispatchEvent(new Event('input'));
-        branchInput.dispatchEvent(new Event('change'));
-        updateRangePreview();
-      });
-    });
+    setupBranchCombobox();
 
     if (pendingSavedBranch) {
       branchInput.value = pendingSavedBranch;
@@ -1309,6 +1309,7 @@ document.addEventListener('DOMContentLoaded', () => {
       tallyPassedCount.textContent = '0';
       tallyGraceCount.textContent = '0';
       tallyFailedCount.textContent = '0';
+      tallyNotFoundCount.textContent = '0';
       semesterInput.value = '';
 
       const lockCourse = document.getElementById('lockCourseCheckbox')?.checked;
@@ -1601,6 +1602,11 @@ document.addEventListener('DOMContentLoaded', () => {
     updateStatsCountsOnly();
   }
 
+  // Separates enrollments the portal has no record of from genuine scrape failures
+  function isNotFoundError(error) {
+    return String(error || '').toLowerCase().includes('not found');
+  }
+
   // Calculates metrics (SGPA/CGPA averages, Pass rates, status counts) from scraped results
   function calculateAnalytics() {
     const filtered = getFilteredResults();
@@ -1609,11 +1615,16 @@ document.addEventListener('DOMContentLoaded', () => {
     let passedCount = 0;
     let graceCount = 0;
     let failedCount = 0;
+    let notFoundCount = 0;
 
     filtered.forEach(student => {
       if (!student) return;
       if (student.error) {
-        failedCount++;
+        if (isNotFoundError(student.error)) {
+          notFoundCount++;
+        } else {
+          failedCount++;
+        }
         return;
       }
 
@@ -1630,6 +1641,7 @@ document.addEventListener('DOMContentLoaded', () => {
     tallyPassedCount.textContent = passedCount;
     tallyGraceCount.textContent = graceCount;
     tallyFailedCount.textContent = failedCount;
+    tallyNotFoundCount.textContent = notFoundCount;
 
     if (successful.length === 0) {
       avgSgpaVal.textContent = '0.00';
@@ -1794,7 +1806,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Setup input preview listeners for helper form inputs
   function setupRangePreview() {
-    const inputs = [collegeSelect, yearInput, rangeStartInput, rangeEndInput];
+    const inputs = [collegeSelect, branchInput, yearInput, rangeStartInput, rangeEndInput];
     inputs.forEach(input => {
       if (input) {
         input.addEventListener('input', updateRangePreview);
@@ -2028,17 +2040,52 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Wires up a searchable combobox: filtering, open/close, keyboard nav, clear button and selection
-  function setupCombobox({ input, dropdownId, clearBtnId, normalize, transformInput, optionValue }) {
+  function setupCombobox({ input, dropdownId, clearBtnId, normalize, transformInput, optionValue, multiple }) {
     const dropdown = document.getElementById(dropdownId);
     if (!input || !dropdown) return;
 
+    const allOptions = () => Array.from(dropdown.querySelectorAll('.combobox-option'));
+    const selectedValues = () => input.value.split(',').map(v => v.trim()).filter(Boolean);
+    const isCompleteValue = (str) => allOptions().some(opt => normalize(optionValue(opt)) === normalize(str));
+
+    // In multi-select mode only the trailing segment is a search query, and only while it is still partial
+    const currentQuery = () => {
+      if (!multiple) return input.value;
+      const last = input.value.split(',').pop().trim();
+      return isCompleteValue(last) ? '' : last;
+    };
+
     const filterOptions = () => {
-      const val = normalize(input.value);
-      dropdown.querySelectorAll('.combobox-option').forEach(opt => {
+      const val = normalize(currentQuery());
+      const chosen = multiple ? selectedValues().map(normalize) : [];
+      allOptions().forEach(opt => {
         const text = normalize(opt.textContent);
         const value = normalize(opt.getAttribute('data-value'));
         opt.classList.toggle('hidden', !text.includes(val) && !value.includes(val));
+        opt.classList.toggle('selected', chosen.includes(normalize(optionValue(opt))));
       });
+    };
+
+    // Replaces the input value on single-select, toggles the clicked code in the list on multi-select
+    const applySelection = (opt) => {
+      const value = optionValue(opt);
+      if (!multiple) {
+        input.value = value;
+        return;
+      }
+
+      const values = selectedValues();
+      if (values.length > 0 && !isCompleteValue(values[values.length - 1])) {
+        values.pop();
+      }
+
+      const existingIndex = values.findIndex(v => normalize(v) === normalize(value));
+      if (existingIndex >= 0) {
+        values.splice(existingIndex, 1);
+      } else {
+        values.push(value);
+      }
+      input.value = values.join(', ');
     };
 
     const showDropdown = () => {
@@ -2073,12 +2120,12 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    dropdown.querySelectorAll('.combobox-option').forEach(opt => {
+    allOptions().forEach(opt => {
       opt.addEventListener('mousedown', (e) => {
         e.preventDefault();
 
-        input.value = optionValue(opt);
-        dropdown.classList.add('hidden');
+        applySelection(opt);
+        if (!multiple) dropdown.classList.add('hidden');
 
         input.dispatchEvent(new Event('input'));
         input.dispatchEvent(new Event('change'));
@@ -2116,7 +2163,8 @@ document.addEventListener('DOMContentLoaded', () => {
       clearBtnId: 'branchClearBtn',
       normalize: str => str.toLowerCase(),
       transformInput: str => str.toUpperCase(),
-      optionValue: opt => opt.getAttribute('data-value')
+      optionValue: opt => opt.getAttribute('data-value'),
+      multiple: true
     });
   }
 

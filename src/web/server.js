@@ -191,7 +191,7 @@ app.post('/api/scrape/stop', async (req, res) => {
 
   if (activeScraperInstance) {
     try {
-      await activeScraperInstance.close();
+      await activeScraperInstance.abort();
     } catch {
       // Ignore
     }
@@ -262,14 +262,10 @@ app.get('/api/scrape/export', (req, res) => {
 
   const { headers, successfulRows, failedRows } = prepareTableDataForServer(filteredResults, courseId, semester);
 
-  let clgCode = 'ALL';
-  const branchCode = branch.toUpperCase();
-  if (filteredResults.length > 0) {
-    const sampleEnroll = filteredResults[0].enrollId;
-    if (sampleEnroll && sampleEnroll.length >= 4) {
-      clgCode = sampleEnroll.substring(0, 4);
-    }
-  }
+  const clgCode = uniqueCodeOrAll(filteredResults.map(r => r.enrollId), 0, 4);
+  const branchCode = branch !== 'ALL'
+    ? branch.toUpperCase()
+    : uniqueCodeOrAll(filteredResults.map(r => r.enrollId), 4, 6);
 
   const baseFilename = `RGPV_${clgCode}_Sem${semester}_${branchCode}`;
 
@@ -311,6 +307,14 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server started on port ${PORT}`);
 });
+
+// Extracts an enrollment ID segment shared by every record, or 'ALL' when they differ
+function uniqueCodeOrAll(enrollIds, start, end) {
+  const codes = new Set(
+    enrollIds.filter(id => id && id.length >= end).map(id => id.substring(start, end).toUpperCase())
+  );
+  return codes.size === 1 ? Array.from(codes)[0] : 'ALL';
+}
 
 // Suffix-range enrollment ID list generator and range parser
 function parseRollRangeForServer(input) {

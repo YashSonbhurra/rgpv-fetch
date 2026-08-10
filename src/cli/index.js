@@ -216,6 +216,14 @@ function writeToExcel(headers, successfulRows, failedRows, outPath) {
   XLSX.writeFile(wb, outPath);
 }
 
+// Extracts an enrollment ID segment shared by every record, or 'ALL' when they differ
+function uniqueCodeOrAll(enrollIds, start, end) {
+  const codes = new Set(
+    enrollIds.filter(id => id && id.length >= end).map(id => id.substring(start, end).toUpperCase())
+  );
+  return codes.size === 1 ? Array.from(codes)[0] : 'ALL';
+}
+
 // Formats duration in seconds to standard 'm s' or 's' layout
 function formatDuration(seconds) {
   const totalSecs = Math.round(seconds);
@@ -328,15 +336,8 @@ program
     if (options.out) {
       outPath = path.resolve(options.out);
     } else {
-      let clgCode = 'ALL';
-      let branchCode = 'ALL';
-      if (enrollIds.length > 0) {
-        const sampleEnroll = enrollIds[0];
-        if (sampleEnroll && sampleEnroll.length >= 6) {
-          clgCode = sampleEnroll.substring(0, 4);
-          branchCode = sampleEnroll.substring(4, 6).toUpperCase();
-        }
-      }
+      const clgCode = uniqueCodeOrAll(enrollIds, 0, 4);
+      const branchCode = uniqueCodeOrAll(enrollIds, 4, 6);
       outPath = path.resolve(`./RGPV_${clgCode}_Sem${semester}_${branchCode}.xlsx`);
     }
 

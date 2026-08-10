@@ -139,9 +139,9 @@
 
             <div class="drawer-row" style="margin-top: 0.75rem; display: flex; align-items: center; justify-content: space-between;">
               <span style="font-size: 0.72rem; font-weight: 700; color: var(--text-muted);">Matrix Background</span>
-              <label class="switch-toggle" style="position: relative; display: inline-block; width: 40px; height: 20px;">
-                <input type="checkbox" id="matrixBgToggle" checked style="opacity: 0; width: 0; height: 0;">
-                <span class="slider-toggle-btn" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--card-border); transition: .3s; border-radius: 20px;"></span>
+              <label class="switch-toggle">
+                <input type="checkbox" id="matrixBgToggle" checked>
+                <span class="slider-toggle-btn"></span>
               </label>
             </div>
 
@@ -194,9 +194,9 @@
 
             <div class="drawer-row" style="margin-top: 0.75rem; display: flex; align-items: center; justify-content: space-between;">
               <span style="font-size: 0.72rem; font-weight: 700; color: var(--text-muted);">Scanning HUD Overlay</span>
-              <label class="switch-toggle" style="position: relative; display: inline-block; width: 40px; height: 20px;">
-                <input type="checkbox" id="scannerUiToggle" checked style="opacity: 0; width: 0; height: 0;">
-                <span class="slider-toggle-btn" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--card-border); transition: .3s; border-radius: 20px;"></span>
+              <label class="switch-toggle">
+                <input type="checkbox" id="scannerUiToggle" checked>
+                <span class="slider-toggle-btn"></span>
               </label>
             </div>
 
@@ -205,9 +205,9 @@
                 <span style="font-family: 'Slackey', cursive; font-size: 0.82rem; color: #d946ef; text-shadow: 0 0 8px rgba(217, 70, 239, 0.45); letter-spacing: 0.5px;">Fun Mode</span>
                 <span style="font-size: 0.62rem; color: var(--text-muted); font-weight: 500; margin-top: 0.15rem; line-height: 1.2;">if you are not lame try fun mode or are you lame?</span>
               </div>
-              <label class="switch-toggle" style="position: relative; display: inline-block; width: 40px; height: 20px; flex-shrink: 0;">
-                <input type="checkbox" id="sfxToggle" style="opacity: 0; width: 0; height: 0;">
-                <span class="slider-toggle-btn" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--card-border); transition: .3s; border-radius: 20px;"></span>
+              <label class="switch-toggle">
+                <input type="checkbox" id="sfxToggle">
+                <span class="slider-toggle-btn"></span>
               </label>
             </div>
 
@@ -326,7 +326,7 @@
                 <div class="form-group" style="flex: 1;">
                   <label for="branchInput" style="display: flex; align-items: center;">
                     Branch Code
-                    <span class="info-tooltip-badge" data-tooltip="Select a department branch identifier (e.g. CS, AL, CY, DS, EC, IT).">?</span>
+                    <span class="info-tooltip-badge" data-tooltip="Select one or more department branch identifiers (e.g. CS, AL, CY, DS, EC, IT). Click a branch again to remove it.">?</span>
                     <label style="display: inline-flex; align-items: center; gap: 4px; font-size: 0.65rem; font-weight: normal; color: var(--text-muted); cursor: pointer; margin-bottom: 0px; margin-left: 4px; user-select: none;">
                       <input type="checkbox" id="lockBranchCheckbox" class="preserve-check">
                       Preserve
@@ -336,7 +336,7 @@
                     <input
                       type="text"
                       id="branchInput"
-                      placeholder="Select or type branch (e.g. CS)"
+                      placeholder="Select or type branches (e.g. CS, IT)"
                       autocomplete="off"
                       style="text-transform: uppercase;"
                     >
@@ -498,8 +498,8 @@
                 <button type="button" class="tab-btn active" data-tab="explorer">Live Grid</button>
                 <button type="button" class="tab-btn" data-tab="analytics" id="analyticsTabBtn">Analytics</button>
               </div>
-              <div class="select-wrapper branch-filter-wrapper hidden" id="branchFilterWrapper" style="width: 140px; margin-bottom: 0;">
-                <select id="branchFilter" aria-label="Filter results by branch" style="width: 100%; padding: 0.35rem 1.5rem 0.35rem 0.5rem; font-size: 0.8rem; height: 34px; background: var(--card-bg); color: var(--text-main); border-radius: 6px; border: 1px solid var(--card-border); cursor: pointer; outline: none;">
+              <div class="select-wrapper branch-filter-wrapper hidden" id="branchFilterWrapper">
+                <select id="branchFilter" aria-label="Filter results by branch">
                   <option value="ALL">All Branches</option>
                 </select>
               </div>
@@ -654,6 +654,10 @@
                       <div class="tally-item" style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0.8rem; background: rgba(192, 41, 43, 0.08); border: 1px solid rgba(192, 41, 43, 0.2); border-radius: 8px;">
                         <span style="font-weight: 600; display: flex; align-items: center; gap: 0.5rem;"><span style="width: 10px; height: 10px; border-radius: 50%; background: #c0292b;"></span>Failed</span>
                         <strong id="tallyFailedCount" style="color: #c0292b; font-size: 1.1rem;">0</strong>
+                      </div>
+                      <div class="tally-item" style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0.8rem; background: var(--badge-error-bg); border: 1px solid var(--badge-error-border); border-radius: 8px;">
+                        <span style="font-weight: 600; display: flex; align-items: center; gap: 0.5rem;"><span style="width: 10px; height: 10px; border-radius: 50%; background: var(--badge-error-text);"></span>Not Found</span>
+                        <strong id="tallyNotFoundCount" style="color: var(--badge-error-text); font-size: 1.1rem;">0</strong>
                       </div>
                     </div>
                   </div>
