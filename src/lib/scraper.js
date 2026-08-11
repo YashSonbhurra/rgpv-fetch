@@ -346,9 +346,13 @@ export class RgpvFetch {
     const hasGrading = $('#ctl00_ContentPlaceHolder1_pnlGrading').length > 0;
     const hasNonGrading = $('#ctl00_ContentPlaceHolder1_pnlNonGrading').length > 0;
 
+    const studentStatus = ($('#ctl00_ContentPlaceHolder1_lblStatusGrading').text().trim()
+      || $('#ctl00_ContentPlaceHolder1_lblStatus').text().trim()).replace(/\s+/g, ' ');
+
     const result = {
       enrollId,
       name,
+      studentStatus,
       status: '',
       subjects: []
     };

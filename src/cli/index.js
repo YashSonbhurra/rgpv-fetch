@@ -88,6 +88,13 @@ function parseRollRange(input) {
   return Array.from(new Set(finalIds));
 }
 
+// Maps the parsed result layout to a human readable label
+function formatLabel(format) {
+  if (format === 'grading') return 'Grading';
+  if (format === 'non-grading') return 'Non-Grading';
+  return 'Unknown';
+}
+
 // Prepares structured table headers and row objects from scraped student records
 function prepareTableData(resultsArray, courseId, semester) {
   const successful = resultsArray.filter(res => !res.error);
@@ -122,7 +129,7 @@ function prepareTableData(resultsArray, courseId, semester) {
     return a.localeCompare(b);
   });
   const headers = [
-    'EnrollId', 'Name', 'Course', 'College', 'Semester', 'Branch', 'Status', 'SGPA', 'CGPA',
+    'EnrollId', 'Name', 'Format', 'Status', 'Course', 'College', 'Semester', 'Branch', 'Result', 'SGPA', 'CGPA',
     ...subjectHeaders
   ];
 
@@ -131,16 +138,18 @@ function prepareTableData(resultsArray, courseId, semester) {
     const clgCode = enrollId.substring(0, 4);
     const branch = enrollId.substring(4, 6);
     const clgName = colleges[clgCode]?.name || clgCode;
-    const courseName = courses[courseId]?.name || courseId;
+    const courseName = courses[courseId]?.name || 'Unknown Course';
 
     const row = {
       EnrollId: enrollId,
       Name: res.name || '',
+      Format: formatLabel(res.format),
+      Status: res.studentStatus || '',
       Course: courseName,
       College: clgName,
       Semester: semester,
       Branch: branch,
-      Status: res.status || '',
+      Result: res.status || '',
       SGPA: res.sgpa || '',
       CGPA: res.cgpa || ''
     };
@@ -243,7 +252,7 @@ function formatJSONResults(resultsArray, courseId, semester) {
     const clgCode = roll.substring(0, 4);
     const branch = roll.substring(4, 6).toUpperCase();
     const clgName = colleges[clgCode]?.name || clgCode;
-    const courseName = courses[courseId]?.name || courseId;
+    const courseName = courses[courseId]?.name || 'Unknown Course';
 
     const grades = {};
     if (res.subjects) {
@@ -278,6 +287,8 @@ function formatJSONResults(resultsArray, courseId, semester) {
     return {
       name: res.name || '',
       roll: roll,
+      format: formatLabel(res.format),
+      status: res.studentStatus || '',
       course: courseName,
       college: clgName,
       branch: branch,

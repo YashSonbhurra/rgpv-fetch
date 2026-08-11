@@ -254,6 +254,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const rawCourseName = coursesData[courseId]?.name || (courseSelect.options[courseSelect.selectedIndex]?.text || 'N/A');
     const courseName = rawCourseName.replace(/\s*\(\d+\)\s*/g, '');
     const branchCode = student.enrollId.substring(4, 6).toUpperCase();
+    const branchName = branchesData?.[branchCode] || 'Unknown Branch';
 
     const semester = student.semester || activeJobSemester || semesterInput.value || 'N/A';
 
@@ -318,6 +319,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const summaryHtml = `
       <div class="marksheet-summary">
+        <div class="marksheet-summary-card">
+          <span class="lbl">Result Status</span>
+          <span class="badge ${badgeClass}" style="font-size: 0.82rem; padding: 0.35rem 0.8rem; margin-top: 0.1rem;">${student.status || 'PASS'}</span>
+        </div>
         ${student.sgpa ? `
           <div class="marksheet-summary-card">
             <span class="lbl">SGPA</span>
@@ -336,21 +341,19 @@ document.addEventListener('DOMContentLoaded', () => {
             <span class="val">${student.totalMarks}</span>
           </div>
         ` : ''}
-        <div class="marksheet-summary-card">
-          <span class="lbl">Result Status</span>
-          <span class="badge ${badgeClass}" style="font-size: 0.82rem; padding: 0.35rem 0.8rem; margin-top: 0.1rem;">${student.status || 'PASS'}</span>
-        </div>
       </div>
     `;
 
     modalReportContent.innerHTML = `
       <div class="marksheet-header-info">
-        <div class="info-item"><span class="lbl">Student Name</span><span class="val">${student.name}</span></div>
-        <div class="info-item"><span class="lbl">Enrollment No.</span><span class="val">${student.enrollId}</span></div>
-        <div class="info-item"><span class="lbl">Course & Branch</span><span class="val">${courseName} (${branchCode})</span></div>
-        <div class="info-item"><span class="lbl">Institution</span><span class="val">${collegeName}</span></div>
-        <div class="info-item"><span class="lbl">Semester</span><span class="val">${semester}</span></div>
-        <div class="info-item"><span class="lbl">Result Format</span><span class="val">${student.format === 'grading' ? 'Grading System (CBGS/CBCS)' : 'Non-Grading Marks System'}</span></div>
+        <div class="info-item col-3"><span class="lbl">Enrollment No.</span><span class="val">${student.enrollId}</span></div>
+        <div class="info-item col-3"><span class="lbl">Student Name</span><span class="val">${student.name}</span></div>
+        <div class="info-item col-1"><span class="lbl">Semester</span><span class="val">${semester}</span></div>
+        <div class="info-item col-2"><span class="lbl">Course</span><span class="val">${courseName}</span></div>
+        <div class="info-item col-3"><span class="lbl">Branch</span><span class="val">${branchName} (${branchCode})</span></div>
+        <div class="info-item col-1"><span class="lbl">Status</span><span class="val">${student.studentStatus || 'N/A'}</span></div>
+        <div class="info-item col-2"><span class="lbl">Format</span><span class="val">${student.format === 'grading' ? 'Grading' : 'Non-Grading'}</span></div>
+        <div class="info-item col-3"><span class="lbl">Institution</span><span class="val">${collegeName} (${clgCode})</span></div>
       </div>
       ${subjectsHtml}
       ${summaryHtml}

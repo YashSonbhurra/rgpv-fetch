@@ -1155,7 +1155,7 @@ footer p {
 
 .marksheet-header-info {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(6, 1fr);
   gap: 1.2rem;
   margin-bottom: 1.5rem;
   padding: 1rem;
@@ -1168,6 +1168,17 @@ footer p {
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
+  min-width: 0;
+}
+
+/* Column spans for the marksheet header grid */
+.info-item.col-1 { grid-column: span 1; }
+.info-item.col-2 { grid-column: span 2; }
+.info-item.col-3 { grid-column: span 3; }
+.info-item.col-6 { grid-column: span 6; }
+
+@media (max-width: 640px) {
+  .info-item.col-1, .info-item.col-2, .info-item.col-3 { grid-column: span 6; }
 }
 
 .info-item .lbl {
