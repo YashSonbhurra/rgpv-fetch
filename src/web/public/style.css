@@ -1402,33 +1402,46 @@ body.dark-theme::before {
   opacity: 0.35;
 }
 
-/* GitHub Header Badge */
-.github-header-badge {
+/* Header Source Badges (GitHub, npm) */
+.header-badge {
   display: inline-flex;
   align-items: center;
-  padding: 0.4rem 0.85rem;
-  border-radius: 50px;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
   background: var(--bg-primary);
   border: 1px solid var(--card-border);
   color: var(--text-muted);
   text-decoration: none;
-  font-size: 0.8rem;
-  font-weight: 600;
   transition: all 0.2s ease;
 }
 
-.github-header-badge:hover {
+.header-badge:hover {
   color: var(--text-main);
   border-color: var(--accent-primary);
   box-shadow: 0 0 8px rgba(37, 99, 235, 0.15);
 }
 
-.github-header-badge svg {
+.header-badge svg {
   transition: transform 0.3s ease;
 }
 
-.github-header-badge:hover svg {
+.header-badge:hover .github-icon {
   transform: rotate(360deg);
+}
+
+.header-badge:hover .npm-icon {
+  transform: scale(1.15);
+}
+
+.header-badge.npm-badge:hover {
+  border-color: #cb3837;
+  box-shadow: 0 0 8px rgb(203 56 55 / 20%);
+}
+
+.header-badge.npm-badge:hover .npm-icon {
+  color: #cb3837;
 }
 
 /* Prominent Export Action Bar */

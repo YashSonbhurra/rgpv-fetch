@@ -1069,6 +1069,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // Smooth-scrolls the window so the given element sits just below the viewport top
+  function scrollElementIntoView(el, delay = 0) {
+    if (!el) return;
+    setTimeout(() => {
+      const offsetTop = el.getBoundingClientRect().top + window.scrollY;
+      window.scrollTo({ top: offsetTop - 20, behavior: 'smooth' });
+    }, delay);
+  }
+
   // Establishes real-time SSE stream listeners to handle scraping progress events
   function setupEventSource() {
     if (eventSource) {
@@ -1085,6 +1094,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (currentStatus === 'scraping') {
         if (previousJobStatus !== 'scraping') {
           playSFX(sfxCook);
+          scrollElementIntoView(progressCard, 150);
         }
         sfxPlayedForThisJob = false;
       }
@@ -1093,13 +1103,7 @@ document.addEventListener('DOMContentLoaded', () => {
         sfxPlayedForThisJob = true;
         playSFX(sfxSuccess);
 
-        setTimeout(() => {
-          const tabsCard = document.querySelector('.tabs-card');
-          if (tabsCard) {
-            const offsetTop = tabsCard.getBoundingClientRect().top + window.scrollY;
-            window.scrollTo({ top: offsetTop - 20, behavior: 'smooth' });
-          }
-        }, 1400);
+        scrollElementIntoView(document.querySelector('.tabs-card'), 1400);
       }
 
       previousJobStatus = currentStatus;
@@ -1524,13 +1528,7 @@ document.addEventListener('DOMContentLoaded', () => {
         sfxPlayedForThisJob = true;
         playSFX(sfxSuccess);
 
-        setTimeout(() => {
-          const tabsCard = document.querySelector('.tabs-card');
-          if (tabsCard) {
-            const offsetTop = tabsCard.getBoundingClientRect().top + window.scrollY;
-            window.scrollTo({ top: offsetTop - 20, behavior: 'smooth' });
-          }
-        }, 1400);
+        scrollElementIntoView(document.querySelector('.tabs-card'), 1400);
       }
     }
   }

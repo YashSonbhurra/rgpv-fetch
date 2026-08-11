@@ -5,9 +5,6 @@
 - [CLI] Add command to clear cache
 - [Data] Add branches for other courses
 - [Data] More granular selection: Selecting course would restrict colleges, semester, branches
-- [UI] Add `favicon.ico` and NPM hook
-- [UI] Add auto scrolling when scraping
-- [Feature] Add multi-branch support in branch dropdown
 - [Feature] Map branch/subject codes to names in result modals and exports
 - [Feature] Find mode: Search by individual name
 - [Feature] Watcher: Check if results are available for a list of courses or semesters
