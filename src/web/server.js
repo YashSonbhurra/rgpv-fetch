@@ -43,6 +43,11 @@ let activeJob = {
   duration: null
 };
 
+// Settles the last in-flight progress snapshot, whose count optimistically includes the record being mined
+function finalizeProgress(status) {
+  activeJob.progress = { ...activeJob.progress, status, current: activeJob.results.length };
+}
+
 let sseClients = [];
 
 // Broadcast event to all active SSE client streams
@@ -103,7 +108,7 @@ app.get('/api/scrape/stream', (req, res) => {
 let activeScraperInstance = null;
 app.post('/api/scrape/start', (req, res) => {
   if (activeJob.status === 'scraping') {
-    return res.status(400).json({ error: 'A scraping job is already active.' });
+    return res.status(400).json({ error: 'A mining job is already active.' });
   }
 
   const { courseId, semester, rollInput, concurrency, staggerDelay, delay, retries, useCache, includeLateral, lateralRange } = req.body;
@@ -114,7 +119,7 @@ app.post('/api/scrape/start', (req, res) => {
 
   activeJob = {
     status: 'scraping',
-    progress: { current: 0, total: 0, enrollId: 'Starting...', status: 'starting', message: 'Configuring scraping worker...' },
+    progress: { current: 0, total: 0, enrollId: 'Starting...', status: 'starting', message: 'Configuring mining worker...' },
     results: [],
     semester: semester,
     courseId: courseId,
@@ -127,7 +132,7 @@ app.post('/api/scrape/start', (req, res) => {
     courseId: activeJob.courseId
   });
 
-  res.json({ message: 'Scraper job successfully started' });
+  res.json({ message: 'Mining job successfully started' });
 
   (async () => {
     const startTime = Date.now();
@@ -166,15 +171,16 @@ app.post('/api/scrape/start', (req, res) => {
 
       if (activeScraperInstance && activeScraperInstance.stopped) {
         activeJob.status = 'aborted';
-        activeJob.progress.status = 'aborted';
+        finalizeProgress('aborted');
         broadcastEvent('state', { status: activeJob.status, progress: activeJob.progress, results: activeJob.results, semester: activeJob.semester, courseId: activeJob.courseId, duration: activeJob.duration });
       } else {
         activeJob.status = 'completed';
-        activeJob.progress.status = 'completed';
+        finalizeProgress('completed');
         broadcastEvent('state', { status: activeJob.status, progress: activeJob.progress, results: activeJob.results, semester: activeJob.semester, courseId: activeJob.courseId, duration: activeJob.duration });
       }
     } catch {
       activeJob.status = 'failed';
+      finalizeProgress('failed');
       activeJob.duration = parseFloat(((Date.now() - startTime) / 1000).toFixed(1));
       broadcastEvent('state', { status: activeJob.status, progress: activeJob.progress, semester: activeJob.semester, courseId: activeJob.courseId, duration: activeJob.duration });
     } finally {
@@ -186,7 +192,7 @@ app.post('/api/scrape/start', (req, res) => {
 // POST endpoint to abort active scraping job
 app.post('/api/scrape/stop', async (req, res) => {
   if (activeJob.status !== 'scraping') {
-    return res.status(400).json({ error: 'No scraping job is currently active.' });
+    return res.status(400).json({ error: 'No mining job is currently active.' });
   }
 
   if (activeScraperInstance) {
@@ -198,15 +204,15 @@ app.post('/api/scrape/stop', async (req, res) => {
   }
 
   activeJob.status = 'aborted';
-  activeJob.progress.status = 'aborted';
-  broadcastEvent('state', { status: activeJob.status, progress: activeJob.progress, semester: activeJob.semester, courseId: activeJob.courseId });
-  res.json({ message: 'Scrape job successfully aborted' });
+  finalizeProgress('aborted');
+  broadcastEvent('state', { status: activeJob.status, progress: activeJob.progress, results: activeJob.results, semester: activeJob.semester, courseId: activeJob.courseId });
+  res.json({ message: 'Mining job successfully aborted' });
 });
 
 // POST endpoint to reset scraper memory state
 app.post('/api/scrape/reset', (req, res) => {
   if (activeJob.status === 'scraping') {
-    return res.status(400).json({ error: 'Cannot reset scraper state while scraping is active.' });
+    return res.status(400).json({ error: 'Cannot reset miner state while mining is active.' });
   }
 
   activeJob = {
@@ -216,13 +222,13 @@ app.post('/api/scrape/reset', (req, res) => {
     semester: '3'
   };
   broadcastEvent('state', { status: activeJob.status, progress: activeJob.progress });
-  res.json({ message: 'Scraper state successfully reset' });
+  res.json({ message: 'Miner state successfully reset' });
 });
 
 // POST endpoint to clear scraped file cache
 app.post('/api/scrape/clear-cache', (req, res) => {
   if (activeJob.status === 'scraping') {
-    return res.status(400).json({ error: 'Cannot clear cache while scraping is active.' });
+    return res.status(400).json({ error: 'Cannot clear cache while mining is active.' });
   }
 
   const cachePath = path.resolve(os.homedir(), '.cache', 'rgpv-fetch');
@@ -252,7 +258,7 @@ app.get('/api/scrape/export', (req, res) => {
   const branch = req.query.branch || 'ALL';
 
   if (activeJob.results.length === 0) {
-    return res.status(400).send('No data available to export. Run a scrape job first.');
+    return res.status(400).send('No data available to export. Run a mining job first.');
   }
 
   let filteredResults = activeJob.results;

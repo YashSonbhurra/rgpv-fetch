@@ -456,9 +456,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!clearCacheBtn) return;
 
     clearCacheBtn.addEventListener('click', async () => {
-      const isScraping = statusLabel.textContent === 'Scraping';
+      const isScraping = statusLabel.textContent === 'Mining';
       if (isScraping) {
-        alert('Cannot clear cache while a scraping job is active.');
+        alert('Cannot clear cache while a mining job is active.');
         return;
       }
 
@@ -739,7 +739,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             tableBody.innerHTML = `
               <tr class="placeholder-row">
-                <td colspan="5" class="txt-muted text-center">Trigger a scraping job to populate data grid</td>
+                <td colspan="5" class="txt-muted text-center">Trigger a mining job to populate data grid</td>
               </tr>
             `;
             resultsCount.textContent = '0 student records found';
@@ -758,9 +758,9 @@ document.addEventListener('DOMContentLoaded', () => {
             tallyFailedCount.textContent = '0';
             tallyNotFoundCount.textContent = '0';
 
-            alert('Dashboard styles, settings, and scraper states have been successfully reset.');
+            alert('Dashboard styles, settings, and miner states have been successfully reset.');
           } else {
-            alert('Styles reset successfully, but server failed to reset scraping state.');
+            alert('Styles reset successfully, but server failed to reset mining state.');
           }
         } catch (err) {
           alert(`Styles reset successfully, but error communicating with server reset: ${err.message}`);
@@ -1132,7 +1132,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (progressBarText) {
-          const studentCount = data.results ? data.results.length : 0;
+          const studentCount = data.results ? data.results.length : studentsResults.length;
           const durationText = (data.duration !== undefined && data.duration !== null) ? ` in ${formatDuration(data.duration)}` : '';
           if (data.status === 'completed') {
             progressBarText.textContent = `Completed: Fetched ${studentCount} students${durationText}`;
@@ -1246,7 +1246,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (!res.ok) {
         const errData = await res.json();
-        throw new Error(errData.error || 'Server error starting scraper');
+        throw new Error(errData.error || 'Server error starting miner');
       }
 
       studentsResults = [];
@@ -1259,7 +1259,7 @@ document.addEventListener('DOMContentLoaded', () => {
       progressCard.classList.remove('hidden');
       lockUI();
     } catch (err) {
-      alert(`Failed to start scraping: ${err.message}`);
+      alert(`Failed to start mining: ${err.message}`);
     }
   });
 
@@ -1271,10 +1271,10 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       const res = await fetch('/api/scrape/stop', { method: 'POST' });
       if (!res.ok) {
-        throw new Error('Server error stopping scraper');
+        throw new Error('Server error stopping miner');
       }
     } catch (err) {
-      alert(`Failed to abort scraper: ${err.message}`);
+      alert(`Failed to abort miner: ${err.message}`);
     }
   });
 
@@ -1283,7 +1283,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const res = await fetch('/api/scrape/reset', { method: 'POST' });
       if (!res.ok) {
-        throw new Error('Server error resetting scraper state');
+        throw new Error('Server error resetting miner state');
       }
 
       studentsResults = [];
@@ -1295,7 +1295,7 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('branchFilterWrapper').classList.add('hidden');
       tableBody.innerHTML = `
         <tr class="placeholder-row">
-          <td colspan="5" class="txt-muted text-center">Trigger a scraping job to populate data grid</td>
+          <td colspan="5" class="txt-muted text-center">Trigger a mining job to populate data grid</td>
         </tr>
       `;
       resultsCount.textContent = '0 student records found';
@@ -1451,7 +1451,7 @@ document.addEventListener('DOMContentLoaded', () => {
       statusIndicator.classList.add(status);
     }
 
-    statusLabel.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+    statusLabel.textContent = status === 'scraping' ? 'Mining' : status.charAt(0).toUpperCase() + status.slice(1);
 
     const container = document.querySelector('main.container');
     const scanner = document.getElementById('cyberScanner');
@@ -1578,7 +1578,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (validResults.length === 0) {
       tableBody.innerHTML = `
         <tr class="placeholder-row">
-          <td colspan="5" class="txt-muted text-center">Trigger a scraping job to populate data grid</td>
+          <td colspan="5" class="txt-muted text-center">Trigger a mining job to populate data grid</td>
         </tr>
       `;
       updateStatsCountsOnly();
@@ -2581,7 +2581,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const container = document.querySelector('main.container');
     const isCurrentlyScraping = container && container.classList.contains('mining-active');
     if (isCurrentlyScraping) {
-      console.log('[Performance Monitor] Scraping job is active. Skipping performance check.');
+      console.log('[Performance Monitor] Mining job is active. Skipping performance check.');
       return;
     }
 
