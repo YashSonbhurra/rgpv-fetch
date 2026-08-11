@@ -5,7 +5,7 @@ import cliProgress from 'cli-progress';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { RgpvFetch } from '../lib/index.js';
 import { exec } from 'child_process';
 
@@ -17,6 +17,9 @@ const courses = JSON.parse(fs.readFileSync(coursesPath, 'utf8'));
 
 const collegesPath = path.resolve(__dirname, '../data/colleges.json');
 const colleges = JSON.parse(fs.readFileSync(collegesPath, 'utf8'));
+
+const branchesPath = path.resolve(__dirname, '../data/branches.json');
+const branches = JSON.parse(fs.readFileSync(branchesPath, 'utf8'));
 
 const program = new Command();
 
@@ -147,7 +150,7 @@ function prepareTableData(resultsArray, courseId, semester) {
       Status: res.studentStatus || '',
       Course: courseName,
       College: clgName,
-      Semester: semester,
+      Semester: String(semester),
       Branch: branch,
       Result: res.status || '',
       SGPA: res.sgpa || '',
@@ -204,33 +207,129 @@ function convertToCSV(headers, successfulRows, failedRows) {
   return csvRows.join('\n');
 }
 
-// Writes prepared table data directly to an Excel sheet on disk
-function writeToExcel(headers, successfulRows, failedRows, outPath) {
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.json_to_sheet(successfulRows, { header: headers });
+// Count of fixed columns preceding the per-subject columns in prepareTableData's header list
+const BASE_COLUMN_COUNT = 11;
+
+// Adds one styled worksheet built from prepared table data
+function addStyledSheet(wb, sheetName, headers, successfulRows, failedRows) {
+  const ws = wb.addWorksheet(sheetName);
+
+  ws.columns = headers.map(header => ({ header, key: header }));
+  successfulRows.forEach(row => ws.addRow(row));
+
+  const widths = headers.map(header => header.length);
+  successfulRows.forEach(row => {
+    headers.forEach((header, i) => {
+      widths[i] = Math.max(widths[i], String(row[header] ?? '').length);
+    });
+  });
 
   if (failedRows.length > 0) {
     const startRow = successfulRows.length + 3;
 
-    XLSX.utils.sheet_add_aoa(ws, [
-      ['FAILED SCRAPES'],
-      ['EnrollId', 'Error']
-    ], { origin: `A${startRow}` });
+    ws.getRow(startRow).getCell(1).value = 'FAILED SCRAPES';
+    ws.getRow(startRow + 1).getCell(1).value = 'EnrollId';
+    ws.getRow(startRow + 1).getCell(2).value = 'Error';
+    ws.getRow(startRow).getCell(1).font = { bold: true };
+    ws.getRow(startRow + 1).getCell(1).font = { bold: true };
+    ws.getRow(startRow + 1).getCell(2).font = { bold: true };
 
-    const failedAOA = failedRows.map(f => [f.enrollId, f.error]);
-    XLSX.utils.sheet_add_aoa(ws, failedAOA, { origin: `A${startRow + 2}` });
+    failedRows.forEach((f, i) => {
+      const row = ws.getRow(startRow + 2 + i);
+      row.getCell(1).value = f.enrollId;
+      row.getCell(2).value = f.error;
+
+      widths[0] = Math.max(widths[0], 'FAILED SCRAPES'.length, String(f.enrollId ?? '').length);
+      widths[1] = Math.max(widths[1], String(f.error ?? '').length);
+    });
   }
 
-  XLSX.utils.book_append_sheet(wb, ws, 'Student Results');
-  XLSX.writeFile(wb, outPath);
+  ws.columns.forEach((column, i) => {
+    column.width = Math.min(Math.max(widths[i] + 2, 10), 40);
+  });
+
+  const headerRow = ws.getRow(1);
+  headerRow.font = { bold: true };
+  headerRow.eachCell(cell => {
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8E8E8' } };
+  });
+
+  const lastRow = successfulRows.length + 1;
+  const outer = { style: 'thin', color: { argb: 'FF808080' } };
+  const inner = { style: 'thin', color: { argb: 'FFBFBFBF' } };
+
+  for (let r = 1; r <= lastRow; r++) {
+    for (let c = 1; c <= headers.length; c++) {
+      const border = {
+        left: c === 1 ? outer : inner,
+        right: c === headers.length ? outer : inner
+      };
+
+      if (r === 1) {
+        border.top = outer;
+      }
+      if (r === 1 || r === lastRow) {
+        border.bottom = outer;
+      }
+
+      ws.getRow(r).getCell(c).border = border;
+    }
+  }
+
+  ws.autoFilter = {
+    from: { row: 1, column: 1 },
+    to: { row: 1, column: headers.length }
+  };
+  ws.views = [{ state: 'frozen', ySplit: 1 }];
 }
 
-// Extracts an enrollment ID segment shared by every record, or 'ALL' when they differ
-function uniqueCodeOrAll(enrollIds, start, end) {
-  const codes = new Set(
+// Builds the results workbook, one worksheet per branch when several are present
+function buildWorkbook(headers, successfulRows, failedRows) {
+  const wb = new ExcelJS.Workbook();
+  const branchOf = enrollId => (enrollId || '').substring(4, 6) || 'UNKNOWN';
+
+  const branches = Array.from(new Set([
+    ...successfulRows.map(row => row.Branch),
+    ...failedRows.map(f => branchOf(f.enrollId))
+  ])).sort();
+
+  if (branches.length <= 1) {
+    addStyledSheet(wb, 'Student Results', headers, successfulRows, failedRows);
+    return wb;
+  }
+
+  branches.forEach(branch => {
+    const rows = successfulRows.filter(row => row.Branch === branch);
+    const failed = failedRows.filter(f => branchOf(f.enrollId) === branch);
+    const subjects = headers.slice(BASE_COLUMN_COUNT)
+      .filter(header => rows.some(row => String(row[header] ?? '') !== ''));
+
+    addStyledSheet(wb, branch, [...headers.slice(0, BASE_COLUMN_COUNT), ...subjects], rows, failed);
+  });
+
+  return wb;
+}
+
+// Writes prepared table data directly to an Excel sheet on disk
+async function writeToExcel(headers, successfulRows, failedRows, outPath) {
+  const wb = buildWorkbook(headers, successfulRows, failedRows);
+  await wb.xlsx.writeFile(outPath);
+}
+
+// Largest number of distinct branch codes listed in a filename before collapsing to 'ALL'
+const MAX_BRANCHES_IN_FILENAME = 4;
+
+// Lists the distinct enrollment ID segments across every record, or 'ALL' past maxCodes of them
+function enrollSegmentLabel(enrollIds, start, end, maxCodes) {
+  const codes = Array.from(new Set(
     enrollIds.filter(id => id && id.length >= end).map(id => id.substring(start, end).toUpperCase())
-  );
-  return codes.size === 1 ? Array.from(codes)[0] : 'ALL';
+  )).sort();
+
+  if (codes.length === 0 || codes.length > maxCodes) {
+    return 'ALL';
+  }
+
+  return codes.join('-');
 }
 
 // Formats duration in seconds to standard 'm s' or 's' layout
@@ -250,8 +349,9 @@ function formatJSONResults(resultsArray, courseId, semester) {
   return successful.map(res => {
     const roll = res.enrollId;
     const clgCode = roll.substring(0, 4);
-    const branch = roll.substring(4, 6).toUpperCase();
+    const branchCode = roll.substring(4, 6).toUpperCase();
     const clgName = colleges[clgCode]?.name || clgCode;
+    const branchName = branches[branchCode] || branchCode;
     const courseName = courses[courseId]?.name || 'Unknown Course';
 
     const grades = {};
@@ -290,8 +390,11 @@ function formatJSONResults(resultsArray, courseId, semester) {
       format: formatLabel(res.format),
       status: res.studentStatus || '',
       course: courseName,
+      courseId: parseInt(courseId, 10),
       college: clgName,
-      branch: branch,
+      collegeCode: clgCode,
+      branch: branchName,
+      branchCode: branchCode,
       sem: parseInt(semester, 10),
       result: res.status || '',
       sgpa: parseGPA(res.sgpa),
@@ -347,9 +450,10 @@ program
     if (options.out) {
       outPath = path.resolve(options.out);
     } else {
-      const clgCode = uniqueCodeOrAll(enrollIds, 0, 4);
-      const branchCode = uniqueCodeOrAll(enrollIds, 4, 6);
-      outPath = path.resolve(`./RGPV_${clgCode}_Sem${semester}_${branchCode}.xlsx`);
+      const courseName = (courses[courseId]?.name || 'Unknown Course').replace(/[^A-Za-z]/g, '');
+      const clgCode = enrollSegmentLabel(enrollIds, 0, 4, 1);
+      const branchCode = enrollSegmentLabel(enrollIds, 4, 6, MAX_BRANCHES_IN_FILENAME);
+      outPath = path.resolve(`./RGPV_${courseName}_${clgCode}_Sem${semester}_${branchCode}.xlsx`);
     }
 
     console.log('Starting scrape job:');
@@ -412,7 +516,7 @@ program
         fs.writeFileSync(outPath, csvContent, 'utf8');
       } else if (ext === '.xlsx' || ext === '.xls') {
         const { headers, successfulRows, failedRows } = prepareTableData(resultsArray, courseId, semester);
-        writeToExcel(headers, successfulRows, failedRows, outPath);
+        await writeToExcel(headers, successfulRows, failedRows, outPath);
       } else {
         const formattedJSON = formatJSONResults(resultsArray, courseId, semester);
         fs.writeFileSync(outPath, JSON.stringify(formattedJSON, null, 2), 'utf8');

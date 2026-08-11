@@ -2,7 +2,7 @@ import axios from 'axios';
 import { wrapper } from 'axios-cookiejar-support';
 import { CookieJar } from 'tough-cookie';
 import * as cheerio from 'cheerio';
-import Jimp from 'jimp';
+import { Jimp } from 'jimp';
 import { createWorker } from 'tesseract.js';
 import fs from 'fs';
 import path from 'path';
@@ -129,8 +129,6 @@ export class RgpvFetch {
         if (Date.now() - cached.timestamp < this.cacheDuration) {
           return cached.data;
         }
-        fs.unlinkSync(file);
-
       }
     } catch {
       // Fail silently
@@ -166,7 +164,7 @@ export class RgpvFetch {
     image.greyscale()
       .invert()
       .convolute(sharpenKernel)
-      .resize(image.bitmap.width * 2, image.bitmap.height * 2);
+      .resize({ w: image.bitmap.width * 2, h: image.bitmap.height * 2 });
 
     image.scan(0, 0, image.bitmap.width, image.bitmap.height, function applyThreshold(x, y, idx) {
       const red = this.bitmap.data[idx];
@@ -179,7 +177,7 @@ export class RgpvFetch {
       this.bitmap.data[idx + 2] = v;
     });
 
-    const processedBuffer = await image.getBufferAsync(Jimp.MIME_PNG);
+    const processedBuffer = await image.getBuffer('image/png');
     const { data: { text } } = await this.worker.recognize(processedBuffer);
     return text.replace(/[^a-zA-Z0-9]/g, '').trim().toUpperCase();
   }
@@ -315,9 +313,8 @@ export class RgpvFetch {
     return this._getResultWithClient(this.client, pageUrl, canonicalEnrollId, semStr, courseId, cacheKey);
   }
 
-  // Caches a result to a file (minified)
+  // Caches a result to a file (minified), regardless of useCache so a forced refresh writes through
   _cacheResult(key, data) {
-    if (!this.useCache) return;
     try {
       if (!fs.existsSync(this.cachePath)) {
         fs.mkdirSync(this.cachePath, { recursive: true });
@@ -454,6 +451,28 @@ export class RgpvFetch {
       }
     }
 
+    // Plans the pass 2 lateral IDs up front so the progress total accounts for them from the start
+    const plannedLateralIds = [];
+    if (lateralConfig && lateralConfig.includeLateral && lateralConfig.range && parseInt(semester, 10) >= 3) {
+      const rangeParts = lateralConfig.range.split('-');
+      if (rangeParts.length === 2) {
+        const latStart = parseInt(rangeParts[0].trim(), 10);
+        const latEnd = parseInt(rangeParts[1].trim(), 10);
+
+        if (!isNaN(latStart) && !isNaN(latEnd)) {
+          const minLat = Math.min(latStart, latEnd);
+          const maxLat = Math.max(latStart, latEnd);
+
+          Object.values(prefixConfig).forEach(pref => {
+            const lateralYear = String((parseInt(pref.prefix.substring(6, 8), 10) + 1) % 100).padStart(2, '0');
+            for (let i = minLat; i <= maxLat; i++) {
+              plannedLateralIds.push(`${pref.prefix.substring(0, 6)}${lateralYear}3D${String(i).padStart(2, '0')}`);
+            }
+          });
+        }
+      }
+    }
+
     let completedCount = 0;
 
     const hasOpenEnded = Object.values(prefixConfig).some(p => p.isQueryOpenEnded);
@@ -468,7 +487,7 @@ export class RgpvFetch {
           sum += (p.maxSeq - p.startSeq + 1);
         }
       });
-      return sum;
+      return sum + plannedLateralIds.length;
     };
 
     for (const pref of Object.values(prefixConfig)) {
@@ -747,193 +766,161 @@ export class RgpvFetch {
     }
 
     // Pass 2: Lateral Entries
-    if (lateralConfig && lateralConfig.includeLateral && lateralConfig.range && !this.stopped) {
-      if (parseInt(semester, 10) >= 3) {
-        try {
-          const prefixes = [];
-          Object.values(prefixConfig).forEach(pref => {
-            prefixes.push({
-              clg: pref.prefix.substring(0, 4),
-              branch: pref.prefix.substring(4, 6),
-              regYear: parseInt(pref.prefix.substring(6, 8), 10)
-            });
+    if (plannedLateralIds.length > 0 && !this.stopped) {
+      try {
+        const lateralIds = plannedLateralIds;
+        let nextLatTaskIndex = 0;
+        const regularCompleted = completedCount;
+        const newTotal = regularCompleted + lateralIds.length;
+
+        if (onProgress) {
+          onProgress({
+            current: regularCompleted,
+            total: newTotal,
+            enrollId: 'Lateral Init...',
+            status: 'scraping',
+            message: 'Starting lateral entries fetch...'
           });
+        }
 
-          const rangeParts = lateralConfig.range.split('-');
-          if (rangeParts.length === 2 && prefixes.length > 0) {
-            const latStart = parseInt(rangeParts[0].trim(), 10);
-            const latEnd = parseInt(rangeParts[1].trim(), 10);
+        const latWorker = async (workerId) => {
+          // Roulette Staggered Startup: start staggered apart to distribute resource consumption
+          if (workerId > 0 && !this.stopped && this.staggerDelay > 0) {
+            await new Promise(resolve => setTimeout(resolve, workerId * this.staggerDelay));
+          }
+          if (this.stopped) return;
 
-            if (!isNaN(latStart) && !isNaN(latEnd)) {
-              const minLat = Math.min(latStart, latEnd);
-              const maxLat = Math.max(latStart, latEnd);
+          const client = clients[workerId] || clients[0];
 
-              const lateralIds = [];
-              for (const pref of prefixes) {
-                const lateralYear = String((pref.regYear + 1) % 100).padStart(2, '0');
-                for (let i = minLat; i <= maxLat; i++) {
-                  const seqStr = String(i).padStart(2, '0');
-                  lateralIds.push(`${pref.clg}${pref.branch}${lateralYear}3D${seqStr}`);
-                }
+          const ensureClientSession = async () => {
+            const cIdStr = String(courseId);
+            if (currentCourseIds[workerId] === cIdStr && redirectUrls[workerId]) {
+              return redirectUrls[workerId];
+            }
+
+            const getProg = await client.get(`${BASE_URL}/result/programselect.aspx?id=$%`);
+            const $ = cheerio.load(getProg.data);
+            const viewstate = $('#__VIEWSTATE').val();
+            const generator = $('#__VIEWSTATEGENERATOR').val();
+            const validation = $('#__EVENTVALIDATION').val();
+
+            if (!viewstate) {
+              throw new Error('Failed to load ProgramSelect.aspx state');
+            }
+
+            const selectData = new URLSearchParams();
+            selectData.append('__EVENTARGUMENT', '');
+            selectData.append('__LASTFOCUS', '');
+            selectData.append('__VIEWSTATE', viewstate);
+            selectData.append('__VIEWSTATEGENERATOR', generator);
+            selectData.append('__EVENTVALIDATION', validation);
+            selectData.append('__EVENTTARGET', 'radlstProgram$1');
+            selectData.append('radlstProgram', cIdStr);
+
+            const postProg = await client.post(`${BASE_URL}/Result/ProgramSelect.aspx`, selectData.toString(), {
+              headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Referer': `${BASE_URL}/result/programselect.aspx?id=$%`
+              },
+              maxRedirects: 0,
+              validateStatus: (status) => status >= 200 && status < 400
+            });
+
+            const redirectSoup = cheerio.load(postProg.data);
+            const linkTag = redirectSoup('a');
+            if (linkTag.length === 0) {
+              throw new Error(`Failed to extract redirect URL for course ID: ${cIdStr}`);
+            }
+
+            const href = decodeURIComponent(linkTag.attr('href'));
+            const redirectUrl = href.startsWith('http') ? href : `${BASE_URL}/${href.replace(/^\//, '')}`;
+
+            currentCourseIds[workerId] = cIdStr;
+            redirectUrls[workerId] = redirectUrl;
+            return redirectUrl;
+          };
+
+          while (!this.stopped) {
+            const taskIndex = nextLatTaskIndex++;
+            if (taskIndex >= lateralIds.length || this.stopped) {
+              break;
+            }
+
+            const enrollId = lateralIds[taskIndex];
+            const cacheKey = `${enrollId}_${semStr}_main`;
+
+            const cachedData = this._getCache(cacheKey);
+            if (cachedData) {
+              results[enrollId] = cachedData;
+              completedCount++;
+              if (onProgress) {
+                onProgress({
+                  current: completedCount,
+                  total: newTotal,
+                  enrollId,
+                  status: 'success',
+                  data: cachedData,
+                  message: `Successfully loaded lateral from cache: ${enrollId}`
+                });
+              }
+              continue;
+            }
+
+            try {
+              if (onProgress) {
+                onProgress({
+                  current: completedCount + 1,
+                  total: newTotal,
+                  enrollId,
+                  status: 'scraping',
+                  message: `Scraping lateral result for ${enrollId}`
+                });
               }
 
-              if (lateralIds.length > 0 && !this.stopped) {
-                let nextLatTaskIndex = 0;
-                const regularCompleted = completedCount;
-                const newTotal = regularCompleted + lateralIds.length;
+              const pageUrl = await ensureClientSession();
+              if (this.stopped) break;
+              const data = await this._getResultWithClient(client, pageUrl, enrollId, semStr, courseId, cacheKey);
 
-                if (onProgress) {
-                  onProgress({
-                    current: regularCompleted,
-                    total: newTotal,
-                    enrollId: 'Lateral Init...',
-                    status: 'scraping',
-                    message: 'Starting lateral entries fetch...'
-                  });
-                }
+              if (this.stopped) break;
+              results[enrollId] = data;
+              completedCount++;
 
-                const latWorker = async (workerId) => {
-                  // Roulette Staggered Startup: start staggered apart to distribute resource consumption
-                  if (workerId > 0 && !this.stopped && this.staggerDelay > 0) {
-                    await new Promise(resolve => setTimeout(resolve, workerId * this.staggerDelay));
-                  }
-                  if (this.stopped) return;
-
-                  const client = clients[workerId] || clients[0];
-
-                  const ensureClientSession = async () => {
-                    const cIdStr = String(courseId);
-                    if (currentCourseIds[workerId] === cIdStr && redirectUrls[workerId]) {
-                      return redirectUrls[workerId];
-                    }
-
-                    const getProg = await client.get(`${BASE_URL}/result/programselect.aspx?id=$%`);
-                    const $ = cheerio.load(getProg.data);
-                    const viewstate = $('#__VIEWSTATE').val();
-                    const generator = $('#__VIEWSTATEGENERATOR').val();
-                    const validation = $('#__EVENTVALIDATION').val();
-
-                    if (!viewstate) {
-                      throw new Error('Failed to load ProgramSelect.aspx state');
-                    }
-
-                    const selectData = new URLSearchParams();
-                    selectData.append('__EVENTARGUMENT', '');
-                    selectData.append('__LASTFOCUS', '');
-                    selectData.append('__VIEWSTATE', viewstate);
-                    selectData.append('__VIEWSTATEGENERATOR', generator);
-                    selectData.append('__EVENTVALIDATION', validation);
-                    selectData.append('__EVENTTARGET', 'radlstProgram$1');
-                    selectData.append('radlstProgram', cIdStr);
-
-                    const postProg = await client.post(`${BASE_URL}/Result/ProgramSelect.aspx`, selectData.toString(), {
-                      headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'Referer': `${BASE_URL}/result/programselect.aspx?id=$%`
-                      },
-                      maxRedirects: 0,
-                      validateStatus: (status) => status >= 200 && status < 400
-                    });
-
-                    const redirectSoup = cheerio.load(postProg.data);
-                    const linkTag = redirectSoup('a');
-                    if (linkTag.length === 0) {
-                      throw new Error(`Failed to extract redirect URL for course ID: ${cIdStr}`);
-                    }
-
-                    const href = decodeURIComponent(linkTag.attr('href'));
-                    const redirectUrl = href.startsWith('http') ? href : `${BASE_URL}/${href.replace(/^\//, '')}`;
-
-                    currentCourseIds[workerId] = cIdStr;
-                    redirectUrls[workerId] = redirectUrl;
-                    return redirectUrl;
-                  };
-
-                  while (!this.stopped) {
-                    const taskIndex = nextLatTaskIndex++;
-                    if (taskIndex >= lateralIds.length || this.stopped) {
-                      break;
-                    }
-
-                    const enrollId = lateralIds[taskIndex];
-                    const cacheKey = `${enrollId}_${semStr}_main`;
-
-                    const cachedData = this._getCache(cacheKey);
-                    if (cachedData) {
-                      results[enrollId] = cachedData;
-                      completedCount++;
-                      if (onProgress) {
-                        onProgress({
-                          current: completedCount,
-                          total: newTotal,
-                          enrollId,
-                          status: 'success',
-                          data: cachedData,
-                          message: `Successfully loaded lateral from cache: ${enrollId}`
-                        });
-                      }
-                      continue;
-                    }
-
-                    try {
-                      if (onProgress) {
-                        onProgress({
-                          current: completedCount + 1,
-                          total: newTotal,
-                          enrollId,
-                          status: 'scraping',
-                          message: `Scraping lateral result for ${enrollId}`
-                        });
-                      }
-
-                      const pageUrl = await ensureClientSession();
-                      if (this.stopped) break;
-                      const data = await this._getResultWithClient(client, pageUrl, enrollId, semStr, courseId, cacheKey);
-
-                      if (this.stopped) break;
-                      results[enrollId] = data;
-                      completedCount++;
-
-                      const isError = !!data.error;
-                      if (onProgress) {
-                        onProgress({
-                          current: completedCount,
-                          total: newTotal,
-                          enrollId,
-                          status: isError ? 'error' : 'success',
-                          data: isError ? undefined : data,
-                          error: isError ? data.error : undefined,
-                          message: isError ? `Failed to scrape lateral ${enrollId}: ${data.error}` : `Successfully scraped lateral ${enrollId}`
-                        });
-                      }
-                    } catch (err) {
-                      if (this.stopped) break;
-                      const errRecord = { error: err.message, enrollId };
-                      results[enrollId] = errRecord;
-                      completedCount++;
-                      if (onProgress) {
-                        onProgress({
-                          current: completedCount,
-                          total: newTotal,
-                          enrollId,
-                          status: 'error',
-                          error: err.message,
-                          message: `Failed to scrape lateral ${enrollId}: ${err.message}`
-                        });
-                      }
-                    }
-                  }
-                };
-
-                const spawnCountLat = Math.min(this.concurrency, lateralIds.length);
-                const workerPromisesLat = Array.from({ length: spawnCountLat }, (_, i) => latWorker(i));
-                await Promise.all(workerPromisesLat);
+              const isError = !!data.error;
+              if (onProgress) {
+                onProgress({
+                  current: completedCount,
+                  total: newTotal,
+                  enrollId,
+                  status: isError ? 'error' : 'success',
+                  data: isError ? undefined : data,
+                  error: isError ? data.error : undefined,
+                  message: isError ? `Failed to scrape lateral ${enrollId}: ${data.error}` : `Successfully scraped lateral ${enrollId}`
+                });
+              }
+            } catch (err) {
+              if (this.stopped) break;
+              const errRecord = { error: err.message, enrollId };
+              results[enrollId] = errRecord;
+              completedCount++;
+              if (onProgress) {
+                onProgress({
+                  current: completedCount,
+                  total: newTotal,
+                  enrollId,
+                  status: 'error',
+                  error: err.message,
+                  message: `Failed to scrape lateral ${enrollId}: ${err.message}`
+                });
               }
             }
           }
-        } catch (latErr) {
-          console.error('Error in lateral entries pass:', latErr.message);
-        }
+        };
+
+        const spawnCountLat = Math.min(this.concurrency, lateralIds.length);
+        const workerPromisesLat = Array.from({ length: spawnCountLat }, (_, i) => latWorker(i));
+        await Promise.all(workerPromisesLat);
+      } catch (latErr) {
+        console.error('Error in lateral entries pass:', latErr.message);
       }
     }
 

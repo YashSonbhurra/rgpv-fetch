@@ -250,7 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    const courseId = student.courseId || activeJobCourseId || courseSelect.value || '24';
+    const courseId = student.courseId || activeJobCourseId || getCourseId() || '24';
     const rawCourseName = coursesData[courseId]?.name || (courseSelect.options[courseSelect.selectedIndex]?.text || 'N/A');
     const courseName = rawCourseName.replace(/\s*\(\d+\)\s*/g, '');
     const branchCode = student.enrollId.substring(4, 6).toUpperCase();
@@ -520,7 +520,7 @@ document.addEventListener('DOMContentLoaded', () => {
     exportQuickBtns.forEach(btn => {
       btn.addEventListener('click', () => {
         const format = btn.getAttribute('data-format');
-        const courseId = courseSelect.value || '24';
+        const courseId = getCourseId() || '24';
         const semester = semesterInput.value || '3';
         const activeBranch = document.getElementById('branchFilter')?.value || 'ALL';
         window.open(`/api/scrape/export?format=${format}&courseId=${courseId}&sem=${semester}&branch=${activeBranch}`, '_blank');

@@ -4,7 +4,7 @@ import fs from 'fs';
 import os from 'os';
 import { fileURLToPath } from 'url';
 import { RgpvFetch } from '../lib/index.js';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -27,6 +27,19 @@ try {
 } catch {
   // Silent fallback
 }
+
+let branches = {};
+try {
+  const branchesPath = path.resolve(__dirname, '../data/branches.json');
+  if (fs.existsSync(branchesPath)) {
+    branches = JSON.parse(fs.readFileSync(branchesPath, 'utf8'));
+  }
+} catch {
+  // Silent fallback
+}
+
+// Largest number of distinct branch codes listed in a filename before collapsing to 'ALL'
+const MAX_BRANCHES_IN_FILENAME = 4;
 
 let activeJob = {
   status: 'idle',
@@ -71,13 +84,10 @@ app.get('/api/colleges', (req, res) => {
 });
 
 app.get('/api/branches', (req, res) => {
-  try {
-    const branchesPath = path.resolve(__dirname, '../data/branches.json');
-    const branches = JSON.parse(fs.readFileSync(branchesPath, 'utf8'));
-    res.json(branches);
-  } catch {
-    res.status(500).json({ error: 'Failed to load branches' });
+  if (Object.keys(branches).length === 0) {
+    return res.status(500).json({ error: 'Failed to load branches' });
   }
+  res.json(branches);
 });
 
 // SSE endpoint to monitor live scraping status
@@ -251,7 +261,7 @@ app.post('/api/scrape/clear-cache', (req, res) => {
 });
 
 // GET endpoint to download scraped results in XLSX, CSV or JSON format
-app.get('/api/scrape/export', (req, res) => {
+app.get('/api/scrape/export', async (req, res) => {
   const format = req.query.format || 'xlsx';
   const courseId = req.query.courseId || '24';
   const semester = req.query.sem || activeJob.semester || '3';
@@ -268,12 +278,13 @@ app.get('/api/scrape/export', (req, res) => {
 
   const { headers, successfulRows, failedRows } = prepareTableDataForServer(filteredResults, courseId, semester);
 
-  const clgCode = uniqueCodeOrAll(filteredResults.map(r => r.enrollId), 0, 4);
+  const courseName = (courses[courseId]?.name || 'Unknown Course').replace(/[^A-Za-z]/g, '');
+  const clgCode = enrollSegmentLabel(filteredResults.map(r => r.enrollId), 0, 4, 1);
   const branchCode = branch !== 'ALL'
     ? branch.toUpperCase()
-    : uniqueCodeOrAll(filteredResults.map(r => r.enrollId), 4, 6);
+    : enrollSegmentLabel(filteredResults.map(r => r.enrollId), 4, 6, MAX_BRANCHES_IN_FILENAME);
 
-  const baseFilename = `RGPV_${clgCode}_Sem${semester}_${branchCode}`;
+  const baseFilename = `RGPV_${courseName}_${clgCode}_Sem${semester}_${branchCode}`;
 
   if (format === 'csv') {
     const csvContent = convertToCSVForServer(headers, successfulRows, failedRows);
@@ -281,22 +292,8 @@ app.get('/api/scrape/export', (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename="${baseFilename}.csv"`);
     return res.send(csvContent);
   } else if (format === 'xlsx') {
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(successfulRows, { header: headers });
-
-    if (failedRows.length > 0) {
-      const startRow = successfulRows.length + 3;
-      XLSX.utils.sheet_add_aoa(ws, [
-        ['FAILED SCRAPES'],
-        ['EnrollId', 'Error']
-      ], { origin: `A${startRow}` });
-
-      const failedAOA = failedRows.map(f => [f.enrollId, f.error]);
-      XLSX.utils.sheet_add_aoa(ws, failedAOA, { origin: `A${startRow + 2}` });
-    }
-
-    XLSX.utils.book_append_sheet(wb, ws, 'Student Results');
-    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    const wb = buildWorkbookForServer(headers, successfulRows, failedRows);
+    const buffer = await wb.xlsx.writeBuffer();
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename="${baseFilename}.xlsx"`);
@@ -305,7 +302,7 @@ app.get('/api/scrape/export', (req, res) => {
   res.setHeader('Content-Type', 'application/json');
   res.setHeader('Content-Disposition', `attachment; filename="${baseFilename}.json"`);
   const formattedJSON = formatJSONResults(filteredResults, courseId, semester);
-  return res.json(formattedJSON);
+  return res.send(JSON.stringify(formattedJSON, null, 2));
 
 });
 
@@ -314,12 +311,17 @@ app.listen(PORT, () => {
   console.log(`Server started on port ${PORT}`);
 });
 
-// Extracts an enrollment ID segment shared by every record, or 'ALL' when they differ
-function uniqueCodeOrAll(enrollIds, start, end) {
-  const codes = new Set(
+// Lists the distinct enrollment ID segments across every record, or 'ALL' past maxCodes of them
+function enrollSegmentLabel(enrollIds, start, end, maxCodes) {
+  const codes = Array.from(new Set(
     enrollIds.filter(id => id && id.length >= end).map(id => id.substring(start, end).toUpperCase())
-  );
-  return codes.size === 1 ? Array.from(codes)[0] : 'ALL';
+  )).sort();
+
+  if (codes.length === 0 || codes.length > maxCodes) {
+    return 'ALL';
+  }
+
+  return codes.join('-');
 }
 
 // Suffix-range enrollment ID list generator and range parser
@@ -397,8 +399,9 @@ function formatJSONResults(resultsArray, courseId, semester) {
   return successful.map(res => {
     const roll = res.enrollId;
     const clgCode = roll.substring(0, 4);
-    const branch = roll.substring(4, 6).toUpperCase();
+    const branchCode = roll.substring(4, 6).toUpperCase();
     const clgName = colleges[clgCode]?.name || clgCode;
+    const branchName = branches[branchCode] || branchCode;
     const courseName = courses[courseId]?.name || 'Unknown Course';
 
     const grades = {};
@@ -437,8 +440,11 @@ function formatJSONResults(resultsArray, courseId, semester) {
       format: formatLabel(res.format),
       status: res.studentStatus || '',
       course: courseName,
+      courseId: parseInt(courseId, 10),
       college: clgName,
-      branch: branch,
+      collegeCode: clgCode,
+      branch: branchName,
+      branchCode: branchCode,
       sem: parseInt(semester, 10),
       result: res.status || '',
       sgpa: parseGPA(res.sgpa),
@@ -500,7 +506,7 @@ function prepareTableDataForServer(resultsArray, courseId, semester) {
       Status: res.studentStatus || '',
       Course: courseName,
       College: clgName,
-      Semester: semester,
+      Semester: String(semester),
       Branch: branch,
       Result: res.status || '',
       SGPA: res.sgpa || '',
@@ -555,4 +561,107 @@ function convertToCSVForServer(headers, successfulRows, failedRows) {
   }
 
   return csvRows.join('\n');
+}
+
+// Count of fixed columns preceding the per-subject columns in prepareTableData's header list
+const BASE_COLUMN_COUNT_FOR_SERVER = 11;
+
+// Adds one styled worksheet built from prepared table data
+function addStyledSheetForServer(wb, sheetName, headers, successfulRows, failedRows) {
+  const ws = wb.addWorksheet(sheetName);
+
+  ws.columns = headers.map(header => ({ header, key: header }));
+  successfulRows.forEach(row => ws.addRow(row));
+
+  const widths = headers.map(header => header.length);
+  successfulRows.forEach(row => {
+    headers.forEach((header, i) => {
+      widths[i] = Math.max(widths[i], String(row[header] ?? '').length);
+    });
+  });
+
+  if (failedRows.length > 0) {
+    const startRow = successfulRows.length + 3;
+
+    ws.getRow(startRow).getCell(1).value = 'FAILED SCRAPES';
+    ws.getRow(startRow + 1).getCell(1).value = 'EnrollId';
+    ws.getRow(startRow + 1).getCell(2).value = 'Error';
+    ws.getRow(startRow).getCell(1).font = { bold: true };
+    ws.getRow(startRow + 1).getCell(1).font = { bold: true };
+    ws.getRow(startRow + 1).getCell(2).font = { bold: true };
+
+    failedRows.forEach((f, i) => {
+      const row = ws.getRow(startRow + 2 + i);
+      row.getCell(1).value = f.enrollId;
+      row.getCell(2).value = f.error;
+
+      widths[0] = Math.max(widths[0], 'FAILED SCRAPES'.length, String(f.enrollId ?? '').length);
+      widths[1] = Math.max(widths[1], String(f.error ?? '').length);
+    });
+  }
+
+  ws.columns.forEach((column, i) => {
+    column.width = Math.min(Math.max(widths[i] + 2, 10), 40);
+  });
+
+  const headerRow = ws.getRow(1);
+  headerRow.font = { bold: true };
+  headerRow.eachCell(cell => {
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8E8E8' } };
+  });
+
+  const lastRow = successfulRows.length + 1;
+  const outer = { style: 'thin', color: { argb: 'FF808080' } };
+  const inner = { style: 'thin', color: { argb: 'FFBFBFBF' } };
+
+  for (let r = 1; r <= lastRow; r++) {
+    for (let c = 1; c <= headers.length; c++) {
+      const border = {
+        left: c === 1 ? outer : inner,
+        right: c === headers.length ? outer : inner
+      };
+
+      if (r === 1) {
+        border.top = outer;
+      }
+      if (r === 1 || r === lastRow) {
+        border.bottom = outer;
+      }
+
+      ws.getRow(r).getCell(c).border = border;
+    }
+  }
+
+  ws.autoFilter = {
+    from: { row: 1, column: 1 },
+    to: { row: 1, column: headers.length }
+  };
+  ws.views = [{ state: 'frozen', ySplit: 1 }];
+}
+
+// Builds the results workbook, one worksheet per branch when several are present
+function buildWorkbookForServer(headers, successfulRows, failedRows) {
+  const wb = new ExcelJS.Workbook();
+  const branchOf = enrollId => (enrollId || '').substring(4, 6) || 'UNKNOWN';
+
+  const branches = Array.from(new Set([
+    ...successfulRows.map(row => row.Branch),
+    ...failedRows.map(f => branchOf(f.enrollId))
+  ])).sort();
+
+  if (branches.length <= 1) {
+    addStyledSheetForServer(wb, 'Student Results', headers, successfulRows, failedRows);
+    return wb;
+  }
+
+  branches.forEach(branch => {
+    const rows = successfulRows.filter(row => row.Branch === branch);
+    const failed = failedRows.filter(f => branchOf(f.enrollId) === branch);
+    const subjects = headers.slice(BASE_COLUMN_COUNT_FOR_SERVER)
+      .filter(header => rows.some(row => String(row[header] ?? '') !== ''));
+
+    addStyledSheetForServer(wb, branch, [...headers.slice(0, BASE_COLUMN_COUNT_FOR_SERVER), ...subjects], rows, failed);
+  });
+
+  return wb;
 }

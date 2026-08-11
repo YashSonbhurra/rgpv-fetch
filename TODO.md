@@ -1,6 +1,4 @@
 ## TODOs
-- [Library] Bump `jimp` and switch from uing `xlsx` to `exceljs`
-- [Library] Add worksheet and column styling functionality for Excel exports
 - [CLI] Implement `branches` and `subjects` subcommands
 - [CLI] Add command to clear cache
 - [Data] Add branches for other courses
