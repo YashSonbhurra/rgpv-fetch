@@ -21,12 +21,15 @@ const colleges = JSON.parse(fs.readFileSync(collegesPath, 'utf8'));
 const branchesPath = path.resolve(__dirname, '../data/branches.json');
 const branches = JSON.parse(fs.readFileSync(branchesPath, 'utf8'));
 
+const pkgPath = path.resolve(__dirname, '../../package.json');
+const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+
 const program = new Command();
 
 program
   .name('rgpv-fetch')
-  .description('CLI tool to scrape and analyze student results from RGPV University')
-  .version('1.0.0');
+  .description('CLI tool to scrape and analyze student results from RGPV University affiliated colleges')
+  .version(pkg.version);
 
 // Parse roll number ranges or lists (supports ranges inside list elements)
 // Pattern prefix includes the digit in the 4th from last place, and sequence range is for the last 3 digits
@@ -131,8 +134,11 @@ function prepareTableData(resultsArray, courseId, semester) {
     if (pA !== pB) return pA - pB;
     return a.localeCompare(b);
   });
+  const hasDivision = successful.some(res => res.division);
   const headers = [
-    'EnrollId', 'Name', 'Format', 'Status', 'Course', 'College', 'Semester', 'Branch', 'Result', 'SGPA', 'CGPA',
+    'EnrollId', 'Name', 'Format', 'Status', 'Course', 'College', 'Semester', 'Branch',
+    ...(hasDivision ? ['Division'] : []),
+    'Result', 'SGPA', 'CGPA',
     ...subjectHeaders
   ];
 
@@ -152,6 +158,7 @@ function prepareTableData(resultsArray, courseId, semester) {
       College: clgName,
       Semester: String(semester),
       Branch: branch,
+      ...(hasDivision ? { Division: res.division || '' } : {}),
       Result: res.status || '',
       SGPA: res.sgpa || '',
       CGPA: res.cgpa || ''
@@ -208,7 +215,9 @@ function convertToCSV(headers, successfulRows, failedRows) {
 }
 
 // Count of fixed columns preceding the per-subject columns in prepareTableData's header list
-const BASE_COLUMN_COUNT = 11;
+function baseColumnCount(headers) {
+  return headers.indexOf('CGPA') + 1;
+}
 
 // Adds one styled worksheet built from prepared table data
 function addStyledSheet(wb, sheetName, headers, successfulRows, failedRows) {
@@ -301,10 +310,11 @@ function buildWorkbook(headers, successfulRows, failedRows) {
   branches.forEach(branch => {
     const rows = successfulRows.filter(row => row.Branch === branch);
     const failed = failedRows.filter(f => branchOf(f.enrollId) === branch);
-    const subjects = headers.slice(BASE_COLUMN_COUNT)
+    const baseCount = baseColumnCount(headers);
+    const subjects = headers.slice(baseCount)
       .filter(header => rows.some(row => String(row[header] ?? '') !== ''));
 
-    addStyledSheet(wb, branch, [...headers.slice(0, BASE_COLUMN_COUNT), ...subjects], rows, failed);
+    addStyledSheet(wb, branch, [...headers.slice(0, baseCount), ...subjects], rows, failed);
   });
 
   return wb;
@@ -396,6 +406,7 @@ function formatJSONResults(resultsArray, courseId, semester) {
       branch: branchName,
       branchCode: branchCode,
       sem: parseInt(semester, 10),
+      ...(res.division ? { division: res.division } : {}),
       result: res.status || '',
       sgpa: parseGPA(res.sgpa),
       cgpa: parseGPA(res.cgpa),
@@ -415,6 +426,7 @@ program
   .option('--no-cache', 'Force re-fetch results')
   .option('--delay <ms>', 'Delay between student postbacks in ms, recommended to leave as is', '5000')
   .option('--retries <count>', 'Maximum retry attempts', '2')
+  .option('--nf-streak <count>', 'Consecutive not-found enrollment numbers that end the scan for a range', '5')
   .option('--concurrency <threads>', 'Number of parallel workers', '6')
   .option('--stagger-delay <ms>', 'Delay interval between starting each parallel worker in ms', '900')
   .option('--cache-path <path>', 'Custom directory path to store cache files')
@@ -474,6 +486,7 @@ program
       useCache: !!options.cache,
       concurrency: parseInt(options.concurrency, 10),
       staggerDelay: parseInt(options.staggerDelay, 10),
+      notFoundStreak: parseInt(options.nfStreak, 10),
       cachePath: options.cachePath || undefined
     });
 

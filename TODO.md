@@ -1,8 +1,10 @@
 ## TODOs
+- [Bug] Fix progress bar functioning for excessively high ranges
 - [CLI] Implement `branches` and `subjects` subcommands
 - [CLI] Add command to clear cache
 - [Data] Add branches for other courses
 - [Data] More granular selection: Selecting course would restrict colleges, semester, branches
+- [Feature] Better implementation for lateral entry range input
 - [Feature] Map branch/subject codes to names in result modals and exports
 - [Feature] Find mode: Search by individual name
 - [Feature] Watcher: Check if results are available for a list of courses or semesters

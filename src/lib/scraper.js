@@ -24,8 +24,9 @@ export class RgpvFetch {
     this.cachePath = options.cachePath ?? path.resolve(os.homedir(), '.cache', 'rgpv-fetch');
     this.useCache = options.useCache ?? true;
     this.cacheDuration = options.cacheDuration ?? 86400 * 1000;
-    this.concurrency = options.concurrency ?? 4;
-    this.staggerDelay = options.staggerDelay ?? 1000;
+    this.concurrency = options.concurrency ?? 6;
+    this.staggerDelay = options.staggerDelay ?? 900;
+    this.notFoundStreak = options.notFoundStreak ?? 5;
     this.jar = new CookieJar();
     this.client = wrapper(axios.create({
       jar: this.jar,
@@ -346,6 +347,8 @@ export class RgpvFetch {
     const studentStatus = ($('#ctl00_ContentPlaceHolder1_lblStatusGrading').text().trim()
       || $('#ctl00_ContentPlaceHolder1_lblStatus').text().trim()).replace(/\s+/g, ' ');
 
+    const division = $('[id^="ctl00_ContentPlaceHolder1_lblDiv"]').first().text().trim().replace(/\s+/g, ' ');
+
     const result = {
       enrollId,
       name,
@@ -353,6 +356,10 @@ export class RgpvFetch {
       status: '',
       subjects: []
     };
+
+    if (division) {
+      result.division = division;
+    }
 
     if (hasGrading) {
       result.format = 'grading';
@@ -562,7 +569,7 @@ export class RgpvFetch {
 
         if (isNotFound) {
           consec++;
-          if (consec >= 5) {
+          if (consec >= this.notFoundStreak) {
             stopSeq = currentSeq;
             break;
           }
@@ -574,11 +581,11 @@ export class RgpvFetch {
 
       if (stopSeq !== -1) {
         pref.stopTriggered = true;
-        const firstFailureSeq = stopSeq - 4;
+        const firstFailureSeq = stopSeq - (this.notFoundStreak - 1);
 
         Object.keys(pref.finishedSeqs).forEach(keySeqStr => {
           const keySeq = parseInt(keySeqStr, 10);
-          if (keySeq > firstFailureSeq) {
+          if (keySeq > firstFailureSeq && pref.finishedSeqs[keySeq].status !== 'success') {
             const badEnrollId = `${pref.prefix}${String(keySeq).padStart(3, '0')}`;
             delete results[badEnrollId];
             delete pref.finishedSeqs[keySeq];
@@ -589,7 +596,6 @@ export class RgpvFetch {
 
     // Parallel queue worker thread implementation
     const worker = async (workerId) => {
-      // Roulette Staggered Startup: start staggered apart to distribute resource consumption
       if (workerId > 0 && !this.stopped && this.staggerDelay > 0) {
         await new Promise(resolve => setTimeout(resolve, workerId * this.staggerDelay));
       }
@@ -784,7 +790,6 @@ export class RgpvFetch {
         }
 
         const latWorker = async (workerId) => {
-          // Roulette Staggered Startup: start staggered apart to distribute resource consumption
           if (workerId > 0 && !this.stopped && this.staggerDelay > 0) {
             await new Promise(resolve => setTimeout(resolve, workerId * this.staggerDelay));
           }

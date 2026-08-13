@@ -312,14 +312,14 @@
               <div class="form-group">
                 <label for="collegeSelect" style="display: flex; align-items: center;">
                   College
-                  <span class="info-tooltip-badge" data-tooltip="Select RGPV affiliated college code (e.g. 0176 for LNCT Bhopal, 0103 for Oriental).">?</span>
+                  <span class="info-tooltip-badge" data-tooltip="Select or type your college name or code to get suggestions.">?</span>
                   <label style="display: inline-flex; align-items: center; gap: 4px; font-size: 0.65rem; font-weight: normal; color: var(--text-muted); cursor: pointer; margin-bottom: 0px; margin-left: 4px; user-select: none;">
                     <input type="checkbox" id="lockCollegeCheckbox" class="preserve-check" checked>
                     Preserve
                   </label>
                 </label>
                 <div class="combobox-wrapper">
-                  <input type="text" id="collegeSelect" placeholder="Select or type college (e.g. 0176)" autocomplete="off">
+                  <input type="text" id="collegeSelect" placeholder="Select or type college name or code (e.g. 0176)" autocomplete="off">
                   <button type="button" class="combobox-clear-btn hidden" id="collegeClearBtn" tabindex="-1">&times;</button>
                   <div class="combobox-dropdown hidden" id="collegeDropdown"></div>
                 </div>
@@ -329,7 +329,7 @@
                 <div class="form-group" style="flex: 1;">
                   <label for="yearInput" style="display: flex; align-items: center;">
                     Year of Admission
-                    <span class="info-tooltip-badge" data-tooltip="Two-digit year code when the students registered (e.g., 23 for batch 2023).">?</span>
+                    <span class="info-tooltip-badge" data-tooltip="Two-digit year of admission (e.g. 23 for batch 2023-27). Auto-filled from semester aaccording to current year.">?</span>
                   </label>
                   <input
                     type="number"
@@ -342,7 +342,7 @@
                 <div class="form-group" style="flex: 1;">
                   <label for="branchInput" style="display: flex; align-items: center;">
                     Branch Code
-                    <span class="info-tooltip-badge" data-tooltip="Select one or more department branch identifiers (e.g. CS, AL, CY, DS, EC, IT). Click a branch again to remove it.">?</span>
+                    <span class="info-tooltip-badge" data-tooltip="Select or type one or more department branch names or codes (e.g. CS, AL, EC). Click a branch again to remove it.">?</span>
                     <label style="display: inline-flex; align-items: center; gap: 4px; font-size: 0.65rem; font-weight: normal; color: var(--text-muted); cursor: pointer; margin-bottom: 0px; margin-left: 4px; user-select: none;">
                       <input type="checkbox" id="lockBranchCheckbox" class="preserve-check">
                       Preserve
@@ -399,20 +399,20 @@
               <div class="form-group">
                 <label for="rollInput" style="display: flex; align-items: center;">
                   Enrollment range or list
-                  <span class="info-tooltip-badge" data-tooltip="Custom enrollment string. Enter ranges using hyphens (e.g., 0176CS231001-080) or list multiple specific roll numbers separated by commas.">?</span>
+                  <span class="info-tooltip-badge" data-tooltip="Custom enrollment strings. Enter ranges using hyphens (e.g. 0176AL231001-080) or list multiple specific roll numbers separated by commas. Combine ranges and lists to mine multiple branches at once.">?</span>
                 </label>
-                <input type="text" id="rollInput" placeholder="e.g. 0103AL241001-010" autocomplete="off">
-                <span class="help-text">Supports shorthand range (001-010) or lists. Max 1000 range.</span>
+                <input type="text" id="rollInput" placeholder="e.g. 0176AL231001-010,0176CS231001-010" autocomplete="off">
+                <span class="help-text">Supports shorthand range (001-010) and lists (001,002,003) and allows mixing them.</span>
               </div>
             </div>
 
             <div class="form-row" id="lateralGroupContainer" style="margin-top: 1rem; align-items: center; display: none;">
               <div class="form-group" style="flex: 1.5; flex-direction: row; align-items: center; gap: 0.5rem; margin-bottom: 0;">
                 <input type="checkbox" id="includeLateralCheckbox" style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent-primary);">
-                <label for="includeLateralCheckbox" style="margin: 0; font-size: 0.85rem; font-weight: 600; cursor: pointer;">Include lateral entries</label>
+                <label for="includeLateralCheckbox" style="margin: 0; font-size: 0.85rem; font-weight: 600; cursor: pointer;">Include lateral entries?</label>
               </div>
               <div class="form-group hidden" id="lateralRangeGroup" style="flex: 1; margin-bottom: 0;">
-                <label for="lateralRangeInput" style="font-size: 0.78rem;">Lateral 2-digit range</label>
+                <label for="lateralRangeInput" style="font-size: 0.78rem;">Lateral Entries 2-digit range</label>
                 <input type="text" id="lateralRangeInput" placeholder="e.g. 01-15" style="padding: 0.5rem 0.7rem; font-size: 0.85rem;">
               </div>
             </div>
@@ -425,7 +425,7 @@
             <div class="accordion-content" id="advContent">
               <div class="form-row">
                 <div class="form-group">
-                  <label for="concurrencyInput" style="display: flex; align-items: center;">Concurrency<span class="info-tooltip-badge" data-tooltip="Number of parallel request worker threads executing simultaneously. Recommended: 6.">?</span></label>
+                  <label for="concurrencyInput" style="display: flex; align-items: center;">Concurrency<span class="info-tooltip-badge" data-tooltip="Number of parallel worker threads. Recommended: 6">?</span></label>
                   <input
                     type="number"
                     id="concurrencyInput"
@@ -436,7 +436,7 @@
                   >
                 </div>
                 <div class="form-group">
-                  <label for="staggerDelayInput" style="display: flex; align-items: center;">Stagger Delay (ms)<span class="info-tooltip-badge" data-tooltip="Delay interval (in milliseconds) between starting each worker thread to prevent resource spikes and rate-limiting. Recommended: 900.">?</span></label>
+                  <label for="staggerDelayInput" style="display: flex; align-items: center;">Stagger Delay (ms)<span class="info-tooltip-badge" data-tooltip="Time interval (in milliseconds) between launching each worker to prevent spikes in network traffic. Recommended: 900">?</span></label>
                   <input
                     type="number"
                     id="staggerDelayInput"
@@ -446,7 +446,7 @@
                   >
                 </div>
                 <div class="form-group">
-                  <label for="delayInput" style="display: flex; align-items: center;">Request Delay (ms)<span class="info-tooltip-badge" data-tooltip="Delay interval (in milliseconds) between sequential page requests from the same worker thread. Safe default: 5000.">?</span></label>
+                  <label for="delayInput" style="display: flex; align-items: center;">Request Delay (ms)<span class="info-tooltip-badge" data-tooltip="Time interval (in milliseconds) to wait before sending each request, requests with very short delays are ignored. Safe default: 5000">?</span></label>
                   <input
                     type="number"
                     id="delayInput"
@@ -456,13 +456,23 @@
                   >
                 </div>
                 <div class="form-group">
-                  <label for="retriesInput" style="display: flex; align-items: center;">Max Retries<span class="info-tooltip-badge" data-tooltip="Maximum number of retry attempts per student record in case of transient captcha solver errors or connection drops.">?</span></label>
+                  <label for="retriesInput" style="display: flex; align-items: center;">Max Retries<span class="info-tooltip-badge" data-tooltip="Maximum number of retries per request in case of unknown connection errors. Recommended: 2-3">?</span></label>
                   <input
                     type="number"
                     id="retriesInput"
                     min="0"
                     max="9"
                     value="2"
+                  >
+                </div>
+                <div class="form-group">
+                  <label for="notFoundStreakInput" style="display: flex; align-items: center;">Max Not Found<span class="info-tooltip-badge" data-tooltip="Maximum number of not-found records that end a mining job automatically. Recommended: 5">?</span></label>
+                  <input
+                    type="number"
+                    id="notFoundStreakInput"
+                    min="2"
+                    max="15"
+                    value="5"
                   >
                 </div>
               </div>
@@ -472,7 +482,7 @@
                   <input type="checkbox" id="cacheCheckbox" checked style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent-primary);">
                   <label for="cacheCheckbox" style="margin: 0; font-size: 0.85rem; font-weight: 600; cursor: pointer; display: flex; align-items: center;">
                     Use local file cache
-                    <span class="info-tooltip-badge" data-tooltip="Enables reading from and writing to local disk cache to speed up subsequent mining jobs and prevent duplicate server requests.">?</span>
+                    <span class="info-tooltip-badge" data-tooltip="Enables reading from local disk cache to speed up subsequent mining jobs and prevent duplicate server requests.">?</span>
                   </label>
                 </div>
 
@@ -485,8 +495,8 @@
             </div>
 
             <div class="form-actions">
-              <button type="submit" id="startBtn" class="btn btn-primary btn-glow">Start Miner</button>
-              <button type="button" id="stopBtn" class="btn btn-danger" disabled>Abort Job</button>
+              <button type="submit" id="startBtn" class="btn btn-primary btn-glow">START MINER</button>
+              <button type="button" id="stopBtn" class="btn btn-danger" disabled>ABORT JOB</button>
               <button type="button" id="resetBtn" class="btn btn-secondary">CLEAR</button>
             </div>
           </form>

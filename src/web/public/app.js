@@ -22,6 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const lateralRangeInput = document.getElementById('lateralRangeInput');
   const delayInput = document.getElementById('delayInput');
   const retriesInput = document.getElementById('retriesInput');
+  const notFoundStreakInput = document.getElementById('notFoundStreakInput');
   const cacheCheckbox = document.getElementById('cacheCheckbox');
   const savePresetBtn = document.getElementById('savePresetBtn');
   const loadPresetBtn = document.getElementById('loadPresetBtn');
@@ -112,6 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let eventSource = null;
   let currentSelectedSubject = '';
   let activeInputMode = 'visual';
+  let yearAutoFill = true;
   let activeJobCourseId = '';
   let activeJobSemester = '';
   let currentSortCol = 'enrollId';
@@ -185,6 +187,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateBranchInput();
     setupRangePreview();
     setupLateralToggle();
+    setupYearAutoFill();
     setupThemeToggle();
     setupClearCache();
     setupModal();
@@ -339,6 +342,12 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="marksheet-summary-card">
             <span class="lbl">Total Marks</span>
             <span class="val">${student.totalMarks}</span>
+          </div>
+        ` : ''}
+        ${student.division ? `
+          <div class="marksheet-summary-card">
+            <span class="lbl">Division</span>
+            <span class="val val-wrap">${student.division}</span>
           </div>
         ` : ''}
       </div>
@@ -1000,7 +1009,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const option = document.createElement('div');
       option.className = 'combobox-option';
       option.setAttribute('data-value', code);
-      option.textContent = `${name} [${code}]`;
+      option.textContent = `[${code}] ${name}`;
       dropdown.appendChild(option);
     });
 
@@ -1232,6 +1241,7 @@ document.addEventListener('DOMContentLoaded', () => {
       staggerDelay: parseInt(staggerDelayInput.value, 10),
       delay: parseInt(delayInput.value, 10),
       retries: parseInt(retriesInput.value, 10),
+      notFoundStreak: parseInt(notFoundStreakInput.value, 10),
       useCache: cacheCheckbox.checked,
       includeLateral: includeLateralCheckbox.checked && parseInt(semesterInput.value, 10) >= 3,
       lateralRange: lateralRangeInput.value.trim()
@@ -1337,6 +1347,7 @@ document.addEventListener('DOMContentLoaded', () => {
       rangeStartInput.value = '1';
       rangeEndInput.value = '';
       yearInput.value = '';
+      yearAutoFill = true;
 
       semesterInput.dispatchEvent(new Event('input'));
       semesterInput.dispatchEvent(new Event('change'));
@@ -1415,6 +1426,7 @@ document.addEventListener('DOMContentLoaded', () => {
     rangeEndInput.disabled = true;
     delayInput.disabled = true;
     retriesInput.disabled = true;
+    if (notFoundStreakInput) notFoundStreakInput.disabled = true;
     cacheCheckbox.disabled = true;
     if (savePresetBtn) savePresetBtn.disabled = true;
     if (updatePresetBtn) updatePresetBtn.disabled = true;
@@ -1439,6 +1451,7 @@ document.addEventListener('DOMContentLoaded', () => {
     rangeEndInput.disabled = false;
     delayInput.disabled = false;
     retriesInput.disabled = false;
+    if (notFoundStreakInput) notFoundStreakInput.disabled = false;
     cacheCheckbox.disabled = false;
     if (savePresetBtn) savePresetBtn.disabled = false;
     if (updatePresetBtn) updatePresetBtn.disabled = false;
@@ -1836,6 +1849,26 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       rangePreviewBadge.textContent = branches.map(br => `${clg}${br}${year}${type}${startNum}-${endNum}`).join(', ');
     }
+  }
+
+  // Setup semester listeners that derive the two-digit year of admission
+  function setupYearAutoFill() {
+    const syncYear = () => {
+      if (!yearAutoFill) return;
+      const sem = parseInt(semesterInput.value || '0', 10);
+      if (!sem || sem < 1) return;
+      const derived = (new Date().getFullYear() % 100) - Math.ceil(sem / 2);
+      yearInput.value = String(derived).padStart(2, '0');
+      updateRangePreview();
+    };
+
+    semesterInput.addEventListener('input', syncYear);
+    semesterInput.addEventListener('change', syncYear);
+    yearInput.addEventListener('input', () => {
+      yearAutoFill = String(yearInput.value).trim() === '';
+    });
+
+    syncYear();
   }
 
   // Setup change event listeners to show/hide lateral inputs based on semester value
@@ -2245,6 +2278,7 @@ document.addEventListener('DOMContentLoaded', () => {
           staggerDelay: staggerDelayInput.value,
           delay: delayInput.value,
           retries: retriesInput.value,
+          notFoundStreak: notFoundStreakInput.value,
           useCache: cacheCheckbox.checked,
           collegeSelectText: collegeSelect.value,
           year: yearInput.value,
@@ -2302,6 +2336,7 @@ document.addEventListener('DOMContentLoaded', () => {
         staggerDelay: staggerDelayInput.value,
         delay: delayInput.value,
         retries: retriesInput.value,
+        notFoundStreak: notFoundStreakInput.value,
         useCache: cacheCheckbox.checked,
         collegeSelectText: collegeSelect.value,
         year: yearInput.value,
@@ -2422,9 +2457,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (config.staggerDelay !== undefined) staggerDelayInput.value = config.staggerDelay;
     if (config.delay !== undefined) delayInput.value = config.delay;
     if (config.retries !== undefined) retriesInput.value = config.retries;
+    if (config.notFoundStreak !== undefined) notFoundStreakInput.value = config.notFoundStreak;
     if (config.useCache !== undefined) cacheCheckbox.checked = config.useCache;
     if (config.collegeSelectText !== undefined) collegeSelect.value = config.collegeSelectText;
     if (config.year !== undefined) yearInput.value = config.year;
+    yearAutoFill = String(yearInput.value || '').trim() === '';
     if (config.branch !== undefined) branchInput.value = config.branch;
     if (config.rangeStart !== undefined) rangeStartInput.value = config.rangeStart;
     if (config.rangeEnd !== undefined) rangeEndInput.value = config.rangeEnd;

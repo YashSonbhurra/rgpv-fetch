@@ -121,7 +121,7 @@ app.post('/api/scrape/start', (req, res) => {
     return res.status(400).json({ error: 'A mining job is already active.' });
   }
 
-  const { courseId, semester, rollInput, concurrency, staggerDelay, delay, retries, useCache, includeLateral, lateralRange } = req.body;
+  const { courseId, semester, rollInput, concurrency, staggerDelay, delay, retries, notFoundStreak, useCache, includeLateral, lateralRange } = req.body;
 
   if (!courseId || !semester || !rollInput) {
     return res.status(400).json({ error: 'Missing required configuration parameters.' });
@@ -152,7 +152,8 @@ app.post('/api/scrape/start', (req, res) => {
         delay: parseInt(delay, 10) ?? 5000,
         useCache: useCache !== false,
         concurrency: parseInt(concurrency, 10) ?? 6,
-        staggerDelay: parseInt(staggerDelay, 10) ?? 900
+        staggerDelay: parseInt(staggerDelay, 10) ?? 900,
+        notFoundStreak: parseInt(notFoundStreak, 10) || 5
       });
 
       const rollNumbers = parseRollRangeForServer(rollInput);
@@ -174,7 +175,7 @@ app.post('/api/scrape/start', (req, res) => {
         broadcastEvent('progress', progress);
       }, { includeLateral, range: lateralRange });
 
-      // Filter out any errors that were discarded at the end of open-ended queries (keep only first of 5 not-founds)
+      // Filter out any errors that were discarded at the end of open-ended queries (keep only the first not-found of the streak)
       activeJob.results = activeJob.results.filter(r => results[r.enrollId] !== undefined);
 
       activeJob.duration = parseFloat(((Date.now() - startTime) / 1000).toFixed(1));
@@ -446,6 +447,7 @@ function formatJSONResults(resultsArray, courseId, semester) {
       branch: branchName,
       branchCode: branchCode,
       sem: parseInt(semester, 10),
+      ...(res.division ? { division: res.division } : {}),
       result: res.status || '',
       sgpa: parseGPA(res.sgpa),
       cgpa: parseGPA(res.cgpa),
@@ -487,8 +489,11 @@ function prepareTableDataForServer(resultsArray, courseId, semester) {
     if (pA !== pB) return pA - pB;
     return a.localeCompare(b);
   });
+  const hasDivision = successful.some(res => res.division);
   const headers = [
-    'EnrollId', 'Name', 'Format', 'Status', 'Course', 'College', 'Semester', 'Branch', 'Result', 'SGPA', 'CGPA',
+    'EnrollId', 'Name', 'Format', 'Status', 'Course', 'College', 'Semester', 'Branch',
+    ...(hasDivision ? ['Division'] : []),
+    'Result', 'SGPA', 'CGPA',
     ...subjectHeaders
   ];
 
@@ -508,6 +513,7 @@ function prepareTableDataForServer(resultsArray, courseId, semester) {
       College: clgName,
       Semester: String(semester),
       Branch: branch,
+      ...(hasDivision ? { Division: res.division || '' } : {}),
       Result: res.status || '',
       SGPA: res.sgpa || '',
       CGPA: res.cgpa || ''
@@ -564,7 +570,9 @@ function convertToCSVForServer(headers, successfulRows, failedRows) {
 }
 
 // Count of fixed columns preceding the per-subject columns in prepareTableData's header list
-const BASE_COLUMN_COUNT_FOR_SERVER = 11;
+function baseColumnCountForServer(headers) {
+  return headers.indexOf('CGPA') + 1;
+}
 
 // Adds one styled worksheet built from prepared table data
 function addStyledSheetForServer(wb, sheetName, headers, successfulRows, failedRows) {
@@ -657,10 +665,11 @@ function buildWorkbookForServer(headers, successfulRows, failedRows) {
   branches.forEach(branch => {
     const rows = successfulRows.filter(row => row.Branch === branch);
     const failed = failedRows.filter(f => branchOf(f.enrollId) === branch);
-    const subjects = headers.slice(BASE_COLUMN_COUNT_FOR_SERVER)
+    const baseCount = baseColumnCountForServer(headers);
+    const subjects = headers.slice(baseCount)
       .filter(header => rows.some(row => String(row[header] ?? '') !== ''));
 
-    addStyledSheetForServer(wb, branch, [...headers.slice(0, BASE_COLUMN_COUNT_FOR_SERVER), ...subjects], rows, failed);
+    addStyledSheetForServer(wb, branch, [...headers.slice(0, baseCount), ...subjects], rows, failed);
   });
 
   return wb;

@@ -1266,6 +1266,13 @@ footer p {
   color: var(--text-main);
 }
 
+/* Long summary values (Division) wrap inside the card instead of overflowing it */
+.marksheet-summary-card .val-wrap {
+  font-size: 0.95rem;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
 #resultsTable tbody tr:not(.placeholder-row):not(.failed-scrape-row) {
   cursor: pointer;
   transition: background-color 0.2s ease;
